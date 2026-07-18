@@ -10,6 +10,7 @@ export interface PersistedState {
   lastFolder: string | null;
   viewMode: ViewMode;
   readingPositions: Record<string, number>;
+  keybindings: Record<string, string>;
 }
 
 export type EntryKind = "folder" | "archive" | "image";
@@ -59,6 +60,11 @@ export function saveViewMode(mode: ViewMode): Promise<void> {
 /** 마지막으로 탐색한 폴더를 저장한다. */
 export function saveLastFolder(folder: string): Promise<void> {
   return invoke("save_last_folder", { folder });
+}
+
+/** 단축키 커스텀 키 맵(동작명→키)을 저장한다. */
+export function saveKeybindings(bindings: Record<string, string>): Promise<void> {
+  return invoke("save_keybindings", { bindings });
 }
 
 /** 폴더 한 단계(하위 폴더 + 코믹 아카이브)를 읽는다. null이면 홈 디렉터리. */

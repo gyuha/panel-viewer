@@ -166,6 +166,121 @@
   white-space: nowrap;
 }
 
+/* 패널 하단 설정 버튼 */
+.panel-foot {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--hairline);
+  padding: var(--s-xs);
+}
+.panel-settings-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--body);
+  font-size: 13px;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.panel-settings-btn:hover {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+
+/* ---- 단축키 설정 모달 ---- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(38, 37, 30, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: var(--surface-card);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-lg);
+  width: min(520px, 92vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: var(--s-lg);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s-xs);
+}
+.modal-title {
+  font-size: 20px;
+}
+.modal-hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 var(--s-base);
+}
+.keymap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.keymap-table th,
+.keymap-table td {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--hairline);
+}
+.keymap-table th {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.std-keys {
+  font-family: var(--font-mono);
+  color: var(--body);
+}
+.custom-key {
+  min-width: 72px;
+  border: 1px solid var(--hairline-strong);
+  background: var(--canvas-soft);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.custom-key:hover {
+  background: var(--surface-strong);
+}
+.custom-key.capturing {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.custom-key-clear {
+  margin-left: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.custom-key-clear:hover {
+  color: var(--error);
+}
+.modal-error {
+  color: var(--error);
+  font-size: 13px;
+  margin: var(--s-sm) 0 0;
+}
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--s-base);
+}
+
 /* ---- 빈 상태 ---- */
 .empty {
   height: 100%;
@@ -229,6 +344,32 @@
   color: var(--muted);
 }
 
+/* 이전/다음 파일 이동 */
+.file-nav {
+  display: flex;
+  gap: 2px;
+}
+.file-nav-btn {
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface-card);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.file-nav-btn:hover:not(:disabled) {
+  background: var(--surface-strong);
+}
+.file-nav-btn:disabled {
+  color: var(--muted-soft);
+  cursor: default;
+  opacity: 0.5;
+}
+
 /* 모드 전환 토글 */
 .mode-toggle {
   display: flex;
@@ -280,14 +421,17 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   padding: var(--s-base);
 }
 .viewer-page {
   max-width: 100%;
   max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   display: block;
 }

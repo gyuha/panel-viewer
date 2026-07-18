@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { ViewMode } from "../lib/nav";
+import { resolve, type CustomKeys } from "../lib/keymap";
 import { PageView } from "./PageView";
 import { ContinuousView } from "./ContinuousView";
 
@@ -9,15 +10,20 @@ interface ViewerProps {
   page: number;
   mode: ViewMode;
   token: string;
+  customKeys: CustomKeys;
+  shortcutsEnabled: boolean;
+  hasPrevFile: boolean;
+  hasNextFile: boolean;
+  onPrevFile: () => void;
+  onNextFile: () => void;
   onPageChange: (page: number) => void;
   onModeChange: (mode: ViewMode) => void;
   onClose: () => void;
 }
 
 const MODES: { key: ViewMode; label: string; title: string }[] = [
-  { key: "ltr", label: "좌→우", title: "좌→우 페이지 모드" },
-  { key: "rtl", label: "우→좌", title: "우→좌 페이지 모드" },
-  { key: "continuous", label: "연속", title: "연속 스크롤 모드" },
+  { key: "page", label: "한장", title: "한 장씩 보기" },
+  { key: "continuous", label: "연속", title: "연속 스크롤 보기" },
 ];
 
 /** 보기 모드에 따라 페이지/연속 뷰를 전환하는 컨테이너. 현재 페이지는 전환 시 유지된다. */
@@ -27,18 +33,36 @@ export function Viewer({
   page,
   mode,
   token,
+  customKeys,
+  shortcutsEnabled,
+  hasPrevFile,
+  hasNextFile,
+  onPrevFile,
+  onNextFile,
   onPageChange,
   onModeChange,
   onClose,
 }: ViewerProps) {
-  // 모드 무관 단축키(닫기)
+  // 모드 무관 단축키: 닫기(Esc) + 파일 이동(한장·연속 두 모드). 설정 모달 열림 중엔 미발동.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (!shortcutsEnabled) return;
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      const action = resolve(e.key, customKeys, mode);
+      if (action === "nextFile") {
+        e.preventDefault();
+        onNextFile();
+      } else if (action === "prevFile") {
+        e.preventDefault();
+        onPrevFile();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [shortcutsEnabled, customKeys, mode, onClose, onNextFile, onPrevFile]);
 
   return (
     <div className="viewer no-select">
@@ -46,6 +70,26 @@ export function Viewer({
         <button className="btn-ghost" onClick={onClose} title="닫기 (Esc)">
           ‹ 닫기
         </button>
+
+        <div className="file-nav" role="group" aria-label="파일 이동">
+          <button
+            className="file-nav-btn"
+            onClick={onPrevFile}
+            disabled={!hasPrevFile}
+            title="이전 파일"
+          >
+            &lt;
+          </button>
+          <button
+            className="file-nav-btn"
+            onClick={onNextFile}
+            disabled={!hasNextFile}
+            title="다음 파일"
+          >
+            &gt;
+          </button>
+        </div>
+
         <span className="viewer-title">{name}</span>
 
         <div className="mode-toggle" role="group" aria-label="보기 모드">
@@ -79,8 +123,9 @@ export function Viewer({
         <PageView
           pageCount={pageCount}
           page={page}
-          mode={mode}
           token={token}
+          customKeys={customKeys}
+          shortcutsEnabled={shortcutsEnabled}
           onPageChange={onPageChange}
         />
       )}

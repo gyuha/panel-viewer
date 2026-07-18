@@ -1,17 +1,26 @@
 import { useCallback, useEffect } from "react";
 import { pageUrl } from "../lib/api";
-import { arrowAdvance, nextPage, prevPage } from "../lib/nav";
+import { nextPage, prevPage } from "../lib/nav";
+import { resolve, type CustomKeys } from "../lib/keymap";
 
 interface PageViewProps {
   pageCount: number;
   page: number;
-  mode: "ltr" | "rtl";
   token: string;
+  customKeys: CustomKeys;
+  shortcutsEnabled: boolean;
   onPageChange: (page: number) => void;
 }
 
-/** 페이지 모드(한 장씩, 화면 맞춤). 좌→우/우→좌 방향에 따라 키·클릭 매핑이 바뀐다. */
-export function PageView({ pageCount, page, mode, token, onPageChange }: PageViewProps) {
+/** 한 장 모드: 화면 맞춤으로 한 페이지씩. 표준 키(→/Space/←/Home/End)+커스텀 키, 좌우 클릭. */
+export function PageView({
+  pageCount,
+  page,
+  token,
+  customKeys,
+  shortcutsEnabled,
+  onPageChange,
+}: PageViewProps) {
   const goNext = useCallback(
     () => onPageChange(nextPage(page, pageCount)),
     [page, pageCount, onPageChange],
@@ -21,39 +30,28 @@ export function PageView({ pageCount, page, mode, token, onPageChange }: PageVie
     [page, pageCount, onPageChange],
   );
 
+  // 페이지 동작만 처리(파일 이동은 Viewer가 담당). 설정 모달 열림 중엔 미발동.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case "ArrowLeft":
-          e.preventDefault();
-          onPageChange(arrowAdvance("left", page, pageCount, mode));
-          break;
-        case "ArrowRight":
-          e.preventDefault();
-          onPageChange(arrowAdvance("right", page, pageCount, mode));
-          break;
-        case " ":
-        case "PageDown":
-          e.preventDefault();
-          goNext();
-          break;
-        case "PageUp":
-          e.preventDefault();
-          goPrev();
-          break;
-        case "Home":
-          e.preventDefault();
-          onPageChange(0);
-          break;
-        case "End":
-          e.preventDefault();
-          onPageChange(pageCount - 1);
-          break;
+      if (!shortcutsEnabled) return;
+      const action = resolve(e.key, customKeys, "page");
+      if (action === "nextPage") {
+        e.preventDefault();
+        goNext();
+      } else if (action === "prevPage") {
+        e.preventDefault();
+        goPrev();
+      } else if (action === "firstPage") {
+        e.preventDefault();
+        onPageChange(0);
+      } else if (action === "lastPage") {
+        e.preventDefault();
+        onPageChange(pageCount - 1);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [page, pageCount, mode, onPageChange, goNext, goPrev]);
+  }, [shortcutsEnabled, customKeys, pageCount, onPageChange, goNext, goPrev]);
 
   // 인접 페이지 프리페치
   useEffect(() => {
@@ -65,10 +63,6 @@ export function PageView({ pageCount, page, mode, token, onPageChange }: PageVie
     });
   }, [page, pageCount, token]);
 
-  // 클릭 영역: 좌→우는 왼쪽=이전/오른쪽=다음, 우→좌는 반대
-  const onLeftClick = mode === "rtl" ? goNext : goPrev;
-  const onRightClick = mode === "rtl" ? goPrev : goNext;
-
   return (
     <div className="viewer-stage">
       <img
@@ -77,8 +71,8 @@ export function PageView({ pageCount, page, mode, token, onPageChange }: PageVie
         alt={`${page + 1} / ${pageCount}`}
         draggable={false}
       />
-      <button className="click-zone left" onClick={onLeftClick} aria-label="왼쪽" />
-      <button className="click-zone right" onClick={onRightClick} aria-label="오른쪽" />
+      <button className="click-zone left" onClick={goPrev} aria-label="이전 페이지" />
+      <button className="click-zone right" onClick={goNext} aria-label="다음 페이지" />
     </div>
   );
 }

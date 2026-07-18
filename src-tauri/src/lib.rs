@@ -90,6 +90,18 @@ fn save_last_folder(folder: String, store: State<'_, PersistState>) {
     let _ = state::save(&file, &data);
 }
 
+/// 단축키 커스텀 키 맵(동작명 → 키)을 저장한다.
+#[tauri::command]
+fn save_keybindings(
+    bindings: std::collections::HashMap<String, String>,
+    store: State<'_, PersistState>,
+) {
+    let mut s = store.lock().unwrap();
+    s.data.keybindings = bindings;
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
 /// 폴더 한 단계를 읽는다. path가 없으면 홈 디렉터리를 연다.
 #[tauri::command]
 fn read_dir(path: Option<String>, app: tauri::AppHandle) -> Result<fs::DirListing, String> {
@@ -199,6 +211,7 @@ pub fn run() {
             save_reading_position,
             save_view_mode,
             save_last_folder,
+            save_keybindings,
             read_dir,
             image_thumbnail,
             system_icon,

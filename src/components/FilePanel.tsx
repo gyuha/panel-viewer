@@ -12,10 +12,17 @@ interface FilePanelProps {
   onOpenFile: (path: string) => void;
   initialFolder: string | null;
   onFolderChange: (folder: string) => void;
+  onOpenSettings: () => void;
 }
 
 /** 왼쪽 파일 패널: 현재 폴더 한 단계(상위/하위 폴더 + 코믹 아카이브)를 평평한 목록으로. */
-export function FilePanel({ openedPath, onOpenFile, initialFolder, onFolderChange }: FilePanelProps) {
+export function FilePanel({
+  openedPath,
+  onOpenFile,
+  initialFolder,
+  onFolderChange,
+  onOpenSettings,
+}: FilePanelProps) {
   const [listing, setListing] = useState<DirListing | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +77,11 @@ export function FilePanel({ openedPath, onOpenFile, initialFolder, onFolderChang
           <p className="panel-empty">이 폴더에 코믹 파일이 없습니다.</p>
         )}
         {error && <p className="panel-error">{error}</p>}
+      </div>
+      <div className="panel-foot">
+        <button className="panel-settings-btn" onClick={onOpenSettings} title="단축키 설정">
+          ⌨︎ 단축키 설정
+        </button>
       </div>
     </aside>
   );

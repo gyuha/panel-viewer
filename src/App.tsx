@@ -9,11 +9,15 @@ import {
   saveViewMode,
   saveLastFolder,
   takePendingFile,
+  readDir,
+  saveKeybindings,
   type ArchiveInfo,
 } from "./lib/api";
 import type { ViewMode } from "./lib/nav";
+import { DEFAULT_CUSTOM, type Action, type CustomKeys } from "./lib/keymap";
 import { Viewer } from "./components/Viewer";
 import { FilePanel } from "./components/FilePanel";
+import { SettingsModal } from "./components/SettingsModal";
 import "./App.css";
 
 const ARCHIVE_EXTS = ["cbz", "cbr", "zip"];
@@ -23,22 +27,36 @@ function hasArchiveExt(path: string): boolean {
   return !!ext && ARCHIVE_EXTS.includes(ext);
 }
 
+/** 경로의 상위 폴더. 구분자는 / 와 \ 모두 처리. */
+function dirname(p: string): string {
+  const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+  return i > 0 ? p.slice(0, i) : p;
+}
+
 function App() {
   const [ready, setReady] = useState(false);
   const [initialFolder, setInitialFolder] = useState<string | null>(null);
   const [info, setInfo] = useState<ArchiveInfo | null>(null);
   const [openedPath, setOpenedPath] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [mode, setMode] = useState<ViewMode>("ltr");
+  const [mode, setMode] = useState<ViewMode>("page");
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [customKeys, setCustomKeys] = useState<CustomKeys>(DEFAULT_CUSTOM);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [fileToken, setFileToken] = useState("");
+  // 현재 파일과 같은 폴더의 아카이브 목록(정렬됨) — 이전/다음 파일 이동용
+  const [siblings, setSiblings] = useState<string[]>([]);
   const readingPositions = useRef<Record<string, number>>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openSeq = useRef(0);
+  const siblingsDir = useRef<string | null>(null);
+  const opening = useRef(false); // 재진입 가드: 여는 중엔 겹친 열기 요청 무시
 
   const openPath = useCallback(async (path: string) => {
+    if (opening.current) return;
+    opening.current = true;
     try {
       const i = await openArchive(path);
       openSeq.current += 1;
@@ -48,8 +66,24 @@ function App() {
       const saved = readingPositions.current[path] ?? 0;
       setPage(saved < i.pageCount ? saved : 0);
       setError(null);
+
+      // 같은 폴더의 아카이브 형제 목록 로드(폴더가 바뀔 때만)
+      const dir = dirname(path);
+      if (siblingsDir.current !== dir) {
+        siblingsDir.current = dir;
+        try {
+          const listing = await readDir(dir);
+          setSiblings(
+            listing.files.filter((f) => f.kind === "archive").map((f) => f.path),
+          );
+        } catch {
+          setSiblings([]);
+        }
+      }
     } catch (e) {
       setError(String(e));
+    } finally {
+      opening.current = false;
     }
   }, []);
 
@@ -59,8 +93,23 @@ function App() {
       setMode(s.viewMode);
       readingPositions.current = s.readingPositions ?? {};
       setInitialFolder(s.lastFolder);
+      // 저장된 커스텀 키를 기본값과 병합(없는 동작은 기본값 유지)
+      setCustomKeys({ ...DEFAULT_CUSTOM, ...(s.keybindings ?? {}) });
       setReady(true);
     });
+  }, []);
+
+  const setBinding = useCallback((action: Action, key: string) => {
+    setCustomKeys((prev) => {
+      const next = { ...prev, [action]: key };
+      void saveKeybindings(next);
+      return next;
+    });
+  }, []);
+
+  const resetBindings = useCallback(() => {
+    setCustomKeys(DEFAULT_CUSTOM);
+    void saveKeybindings(DEFAULT_CUSTOM);
   }, []);
 
   // 파일 연결로 넘어온 파일 처리(시작 시 대기 파일 + 실행 중 open-archive 이벤트)
@@ -131,6 +180,11 @@ function App() {
     return <div className="boot" />;
   }
 
+  // 현재 파일 기준 이전/다음 파일
+  const currentIndex = openedPath ? siblings.indexOf(openedPath) : -1;
+  const hasPrevFile = currentIndex > 0;
+  const hasNextFile = currentIndex >= 0 && currentIndex < siblings.length - 1;
+
   return (
     <div className={`app-shell ${dragOver ? "drag" : ""}`}>
       <FilePanel
@@ -138,6 +192,7 @@ function App() {
         onOpenFile={openPath}
         initialFolder={initialFolder}
         onFolderChange={handleFolderChange}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
       <div className="app-main">
         {info ? (
@@ -147,6 +202,16 @@ function App() {
             page={page}
             mode={mode}
             token={fileToken}
+            customKeys={customKeys}
+            shortcutsEnabled={!settingsOpen}
+            hasPrevFile={hasPrevFile}
+            hasNextFile={hasNextFile}
+            onPrevFile={() => {
+              if (hasPrevFile) void openPath(siblings[currentIndex - 1]);
+            }}
+            onNextFile={() => {
+              if (hasNextFile) void openPath(siblings[currentIndex + 1]);
+            }}
             onPageChange={handlePageChange}
             onModeChange={handleModeChange}
             onClose={() => {
@@ -168,6 +233,15 @@ function App() {
           </div>
         )}
       </div>
+
+      {settingsOpen && (
+        <SettingsModal
+          customKeys={customKeys}
+          onSet={setBinding}
+          onReset={resetBindings}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }
