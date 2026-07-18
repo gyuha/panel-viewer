@@ -111,6 +111,15 @@ fn save_panel_hidden(hidden: bool, store: State<'_, PersistState>) {
     let _ = state::save(&file, &data);
 }
 
+/// 창 크기(논리 픽셀)를 저장한다. 프런트가 리사이즈를 디바운스해 호출한다.
+#[tauri::command]
+fn save_window_size(width: f64, height: f64, store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.window_size = Some(state::WindowSize { width, height });
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
 /// 폴더 한 단계를 읽는다. path가 없으면 홈 디렉터리를 연다.
 #[tauri::command]
 fn read_dir(path: Option<String>, app: tauri::AppHandle) -> Result<fs::DirListing, String> {
@@ -178,7 +187,26 @@ pub fn run() {
         .setup(|app| {
             let file = app.path().app_data_dir()?.join("state.json");
             let data = state::load(&file);
+            let saved_size = data.window_size;
             app.manage(Mutex::new(StateStore { path: file, data }));
+
+            // 저장된 창 크기 복원(현재 모니터로 상한 클램프). 없으면 config 기본 크기 유지.
+            if let Some(sz) = saved_size {
+                if let Some(win) = app.get_webview_window("main") {
+                    let (max_w, max_h) = win
+                        .current_monitor()
+                        .ok()
+                        .flatten()
+                        .map(|m| {
+                            let sf = m.scale_factor();
+                            let s = m.size();
+                            (s.width as f64 / sf, s.height as f64 / sf)
+                        })
+                        .unwrap_or((f64::INFINITY, f64::INFINITY));
+                    let (w, h) = state::clamp_window_size(sz.width, sz.height, max_w, max_h);
+                    let _ = win.set_size(tauri::LogicalSize::new(w, h));
+                }
+            }
 
             // 시작 인자로 넘어온 파일(Windows/Linux 파일 연결, 또는 CLI 실행)
             if let Some(arg) = std::env::args().nth(1) {
@@ -222,6 +250,7 @@ pub fn run() {
             save_last_folder,
             save_keybindings,
             save_panel_hidden,
+            save_window_size,
             read_dir,
             image_thumbnail,
             system_icon,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
@@ -12,6 +13,7 @@ import {
   readDir,
   saveKeybindings,
   savePanelHidden,
+  saveWindowSize,
   type ArchiveInfo,
   type DirListing,
 } from "./lib/api";
@@ -206,6 +208,24 @@ function App() {
       void unlisten.then((f) => f());
     };
   }, [openPath]);
+
+  // 창 크기 변경을 디바운스해 저장(복원은 백엔드 setup()이 담당).
+  useEffect(() => {
+    const win = getCurrentWindow();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const un = win.onResized(({ payload }) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        void win.scaleFactor().then((sf) => {
+          void saveWindowSize(payload.width / sf, payload.height / sf);
+        });
+      }, 400);
+    });
+    return () => {
+      if (timer) clearTimeout(timer);
+      void un.then((f) => f());
+    };
+  }, []);
 
   if (!ready) {
     return <div className="boot" />;

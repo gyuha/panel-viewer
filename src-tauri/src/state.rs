@@ -15,7 +15,14 @@ pub enum ViewMode {
     Continuous,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+/// 마지막 창 크기(논리 픽셀). f64를 담으므로 PersistedState는 Eq를 derive하지 않는다.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Default)]
+pub struct WindowSize {
+    pub width: f64,
+    pub height: f64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PersistedState {
     #[serde(default)]
@@ -32,6 +39,14 @@ pub struct PersistedState {
     /// 파일 패널을 숨긴 상태인지. 필드가 없으면(구버전) false(표시)로 로드.
     #[serde(default)]
     pub panel_hidden: bool,
+    /// 마지막 창 크기. 없으면(구버전/최초 실행) None → config 기본 크기 사용.
+    #[serde(default)]
+    pub window_size: Option<WindowSize>,
+}
+
+/// 저장된 창 크기를 모니터 한계로 상한 제한한다(하한은 두지 않는다).
+pub fn clamp_window_size(width: f64, height: f64, max_width: f64, max_height: f64) -> (f64, f64) {
+    (width.min(max_width), height.min(max_height))
 }
 
 /// 파일에서 상태를 읽는다. 파일이 없거나 깨졌으면 기본값을 돌려준다(뷰어는 절대 죽지 않는다).
@@ -70,11 +85,16 @@ mod tests {
             reading_positions: HashMap::new(),
             keybindings: HashMap::new(),
             panel_hidden: true,
+            window_size: None,
         };
         s.reading_positions.insert("/a/b.cbz".into(), 37);
         s.reading_positions.insert("/a/c.cbr".into(), 4);
         s.keybindings.insert("nextFile".into(), ".".into());
         s.keybindings.insert("prevFile".into(), ",".into());
+        s.window_size = Some(WindowSize {
+            width: 1000.0,
+            height: 700.0,
+        });
         save(&p, &s).unwrap();
 
         let loaded = load(&p);
@@ -98,6 +118,52 @@ mod tests {
         assert!(loaded.keybindings.is_empty());
         assert!(!loaded.panel_hidden); // 기본값 false(표시)
         assert_eq!(loaded.reading_positions.get("/a.cbz"), Some(&3));
+    }
+
+    #[test]
+    fn clamp_keeps_size_within_monitor() {
+        assert_eq!(clamp_window_size(800.0, 600.0, 1440.0, 900.0), (800.0, 600.0));
+    }
+
+    #[test]
+    fn clamp_caps_size_larger_than_monitor() {
+        assert_eq!(clamp_window_size(2000.0, 1200.0, 1440.0, 900.0), (1440.0, 900.0));
+        // 한 축만 초과하면 그 축만 제한
+        assert_eq!(clamp_window_size(2000.0, 600.0, 1440.0, 900.0), (1440.0, 600.0));
+    }
+
+    #[test]
+    fn clamp_at_exact_boundary_is_unchanged() {
+        assert_eq!(clamp_window_size(1440.0, 900.0, 1440.0, 900.0), (1440.0, 900.0));
+    }
+
+    #[test]
+    fn window_size_round_trips_and_old_json_has_none() {
+        let p = tmp_file("winsize.json");
+        let s = PersistedState {
+            window_size: Some(WindowSize {
+                width: 900.0,
+                height: 640.0,
+            }),
+            ..Default::default()
+        };
+        save(&p, &s).unwrap();
+        assert_eq!(
+            load(&p).window_size,
+            Some(WindowSize {
+                width: 900.0,
+                height: 640.0
+            })
+        );
+
+        // 구버전 JSON(windowSize 필드 없음) → None
+        let p2 = tmp_file("no_winsize.json");
+        std::fs::write(
+            &p2,
+            br#"{"lastFolder":null,"viewMode":"page","readingPositions":{}}"#,
+        )
+        .unwrap();
+        assert_eq!(load(&p2).window_size, None);
     }
 
     #[test]

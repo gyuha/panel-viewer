@@ -12,6 +12,7 @@ export interface PersistedState {
   readingPositions: Record<string, number>;
   keybindings: Record<string, string>;
   panelHidden: boolean;
+  windowSize: { width: number; height: number } | null;
 }
 
 export type EntryKind = "folder" | "archive" | "image";
@@ -71,6 +72,11 @@ export function saveKeybindings(bindings: Record<string, string>): Promise<void>
 /** 파일 패널 숨김 상태를 저장한다. */
 export function savePanelHidden(hidden: boolean): Promise<void> {
   return invoke("save_panel_hidden", { hidden });
+}
+
+/** 창 크기(논리 픽셀)를 저장한다. 복원은 백엔드 setup()이 담당. */
+export function saveWindowSize(width: number, height: number): Promise<void> {
+  return invoke("save_window_size", { width, height });
 }
 
 /** 폴더 한 단계(하위 폴더 + 코믹 아카이브)를 읽는다. null이면 홈 디렉터리. */
