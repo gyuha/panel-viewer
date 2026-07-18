@@ -1,0 +1,90 @@
+/* DESIGN.md(Cursor 분석) 토큰을 CSS 변수로 옮긴 것.
+   결정: 뷰어 배경까지 전체 크림 톤 일관 — 다크 배경 아님. */
+:root {
+  /* Brand */
+  --primary: #f54e00;
+  --primary-active: #d04200;
+  --on-primary: #ffffff;
+
+  /* Surface */
+  --canvas: #f7f7f4;
+  --canvas-soft: #fafaf7;
+  --surface-card: #ffffff;
+  --surface-strong: #e6e5e0;
+
+  /* Hairlines */
+  --hairline: #e6e5e0;
+  --hairline-soft: #efeee8;
+  --hairline-strong: #cfcdc4;
+
+  /* Text */
+  --ink: #26251e;
+  --body: #5a5852;
+  --muted: #807d72;
+  --muted-soft: #a09c92;
+
+  /* Semantic */
+  --error: #cf2d56;
+  --success: #1f8a65;
+
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-pill: 9999px;
+
+  /* Spacing (4px base) */
+  --s-xxs: 4px;
+  --s-xs: 8px;
+  --s-sm: 12px;
+  --s-base: 16px;
+  --s-md: 20px;
+  --s-lg: 24px;
+  --s-xl: 32px;
+
+  /* CursorGothic 대체: Inter 계열 (마젠타 편집체 느낌). 라이선스 폰트 미번들 — 시스템 폴백. */
+  --font-sans: "Inter", system-ui, -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* 편집체 목소리: display는 굵기 400, 음의 자간 */
+h1,
+h2,
+h3 {
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* 선택 방지(뷰어 클릭 내비게이션 시 드래그 선택 방지) */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}

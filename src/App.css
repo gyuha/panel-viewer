@@ -1,0 +1,307 @@
+/* ---- 공통 버튼 ---- */
+.btn-primary {
+  background: var(--primary);
+  color: var(--on-primary);
+  border: none;
+  border-radius: var(--r-md);
+  padding: 10px 18px;
+  height: 40px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background: var(--primary-active);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: none;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.btn-ghost:hover {
+  background: var(--surface-strong);
+}
+
+/* ---- 셸 레이아웃 ---- */
+.boot {
+  height: 100%;
+  background: var(--canvas);
+}
+.app-shell {
+  height: 100%;
+  display: flex;
+  background: var(--canvas);
+}
+.app-shell.drag {
+  outline: 2px dashed var(--primary);
+  outline-offset: -12px;
+}
+.app-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+
+/* ---- 파일 패널 ---- */
+.panel {
+  flex: 0 0 280px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--hairline);
+  background: var(--canvas-soft);
+}
+.panel-path {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.panel-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--s-xs);
+}
+.panel-empty,
+.panel-error {
+  padding: var(--s-base);
+  font-size: 13px;
+  color: var(--muted);
+}
+.panel-error {
+  color: var(--error);
+}
+
+.dir-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-xs);
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 14px;
+}
+.dir-row:hover {
+  background: var(--surface-strong);
+}
+.dir-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  text-align: center;
+}
+.dir-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm);
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  color: var(--ink);
+}
+.file-row:hover {
+  background: var(--surface-strong);
+}
+.file-row.active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.file-thumb {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--r-xs, 4px);
+  background: var(--surface-strong);
+}
+.file-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.file-thumb-ph {
+  width: 100%;
+  height: 100%;
+  background: var(--hairline);
+}
+.file-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- 빈 상태 ---- */
+.empty {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: var(--canvas);
+}
+.empty-card {
+  text-align: center;
+  max-width: 420px;
+  padding: var(--s-xl);
+}
+.empty-title {
+  font-size: 36px;
+  letter-spacing: -0.03em;
+  margin-bottom: var(--s-xs);
+}
+.empty-sub {
+  color: var(--body);
+  margin: 0 0 var(--s-lg);
+}
+.empty-hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: var(--s-md);
+}
+.empty-error {
+  color: var(--error);
+  font-size: 14px;
+  margin-top: var(--s-base);
+}
+
+/* ---- 뷰어 ---- */
+.viewer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+}
+.viewer-bar {
+  height: 44px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm);
+  padding: 0 var(--s-sm);
+  border-bottom: 1px solid var(--hairline);
+  background: var(--canvas-soft);
+}
+.viewer-title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--ink);
+}
+.viewer-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* 모드 전환 토글 */
+.mode-toggle {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-strong);
+  border-radius: var(--r-md);
+}
+.mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--body);
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.mode-btn:hover {
+  color: var(--ink);
+}
+.mode-btn.active {
+  background: var(--surface-card);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* 연속 스크롤 모드 */
+.continuous {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--canvas);
+  scroll-behavior: auto;
+}
+.cont-page {
+  display: flex;
+  justify-content: center;
+  min-height: 60vh; /* 미로드 페이지도 자리를 확보해 스크롤 위치를 근사 */
+}
+.cont-img {
+  width: 100%;
+  max-width: 900px;
+  height: auto;
+  display: block;
+}
+
+.viewer-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: var(--s-base);
+}
+.viewer-page {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* 좌우 클릭 영역 (투명 오버레이) */
+.click-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.click-zone.left {
+  left: 0;
+  cursor: w-resize;
+}
+.click-zone.right {
+  right: 0;
+  cursor: e-resize;
+}
