@@ -48,6 +48,7 @@ export function Viewer({
   onClose,
 }: ViewerProps) {
   // 모드 무관 단축키: 닫기(Esc) + 파일 이동(한장·연속 두 모드). 설정 모달 열림 중엔 미발동.
+  // (앱 종료 x는 App의 전역 핸들러가 담당)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!shortcutsEnabled) return;

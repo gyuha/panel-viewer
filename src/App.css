@@ -436,6 +436,17 @@
   background: var(--canvas);
   scroll-behavior: auto;
 }
+/* 오른쪽 스크롤바를 얇게(기본의 약 1/3) */
+.continuous::-webkit-scrollbar {
+  width: 2px;
+}
+.continuous::-webkit-scrollbar-thumb {
+  background: var(--muted-soft);
+  border-radius: 1px;
+}
+.continuous::-webkit-scrollbar-track {
+  background: transparent;
+}
 .cont-page {
   display: flex;
   justify-content: center;

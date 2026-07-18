@@ -14,6 +14,7 @@ import {
   saveKeybindings,
   savePanelHidden,
   saveWindowSize,
+  quitApp,
   type ArchiveInfo,
   type DirListing,
 } from "./lib/api";
@@ -136,10 +137,16 @@ function App() {
     void savePanelHidden(next);
   }, [panelHidden]);
 
-  // 전역 '/'(또는 재지정된 키): 파일 안 열려 있어도 동작. 설정 모달 열림 중엔 미발동.
+  // 전역 단축키: x(앱 종료) · '/'(패널 토글, 재지정 가능). 파일 안 열려 있어도 동작.
+  // 설정 모달 열림 중엔 미발동.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (settingsOpen) return;
+      if (e.key === "x") {
+        e.preventDefault();
+        void quitApp();
+        return;
+      }
       if (customKeys.togglePanel !== "" && e.key === customKeys.togglePanel) {
         e.preventDefault();
         togglePanel();

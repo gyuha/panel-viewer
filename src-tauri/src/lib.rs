@@ -161,6 +161,12 @@ fn take_pending_file(pending: State<'_, PendingFile>) -> Option<String> {
     pending.lock().unwrap().take()
 }
 
+/// 앱을 종료한다.
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 fn mime_for(name: &str) -> &'static str {
     match std::path::Path::new(name)
         .extension()
@@ -254,7 +260,8 @@ pub fn run() {
             read_dir,
             image_thumbnail,
             system_icon,
-            take_pending_file
+            take_pending_file,
+            quit_app
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

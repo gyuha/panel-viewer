@@ -112,3 +112,8 @@ export function systemIconUrl(path: string): Promise<string> {
 export function takePendingFile(): Promise<string | null> {
   return invoke<string | null>("take_pending_file");
 }
+
+/** 앱을 종료한다. */
+export function quitApp(): Promise<void> {
+  return invoke("quit_app");
+}
