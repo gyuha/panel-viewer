@@ -91,18 +91,18 @@
   border: none;
   background: transparent;
   text-align: left;
-  padding: 6px 8px;
+  padding: 3px 8px;
   border-radius: var(--r-sm);
   cursor: pointer;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13px;
 }
 .dir-row:hover {
   background: var(--surface-strong);
 }
 .dir-icon {
   flex: 0 0 auto;
-  width: 18px;
+  width: 24px;
   text-align: center;
 }
 .dir-name {
@@ -114,12 +114,12 @@
 .file-row {
   display: flex;
   align-items: center;
-  gap: var(--s-sm);
+  gap: var(--s-xs);
   width: 100%;
   border: none;
   background: transparent;
   text-align: left;
-  padding: 6px 8px;
+  padding: 3px 8px;
   border-radius: var(--r-sm);
   cursor: pointer;
   color: var(--ink);
@@ -139,8 +139,8 @@
 }
 .file-thumb {
   flex: 0 0 auto;
-  width: 36px;
-  height: 48px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
