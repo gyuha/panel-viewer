@@ -26,4 +26,5 @@ serde_json = "1"
 zip = "2"
 unrar = "0.5"
 image = "0.25"
+systemicons = "0.9.13"
 

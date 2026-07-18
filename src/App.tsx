@@ -33,12 +33,16 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
+  const [fileToken, setFileToken] = useState("");
   const readingPositions = useRef<Record<string, number>>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openSeq = useRef(0);
 
   const openPath = useCallback(async (path: string) => {
     try {
       const i = await openArchive(path);
+      openSeq.current += 1;
+      setFileToken(String(openSeq.current));
       setOpenedPath(path);
       setInfo(i);
       const saved = readingPositions.current[path] ?? 0;
@@ -142,6 +146,7 @@ function App() {
             pageCount={info.pageCount}
             page={page}
             mode={mode}
+            token={fileToken}
             onPageChange={handlePageChange}
             onModeChange={handleModeChange}
             onClose={() => {

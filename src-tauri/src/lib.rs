@@ -100,15 +100,29 @@ fn read_dir(path: Option<String>, app: tauri::AppHandle) -> Result<fs::DirListin
     fs::list_dir(&dir).map_err(|e| e.to_string())
 }
 
-/// 아카이브 커버 썸네일(JPEG 바이트)을 반환한다. 앱 캐시 디렉터리에 캐시.
+/// 이미지 파일의 썸네일(JPEG 바이트)을 반환한다. 앱 캐시 디렉터리에 캐시.
 #[tauri::command]
-fn cover_thumbnail(path: String, app: tauri::AppHandle) -> Result<Vec<u8>, String> {
+fn image_thumbnail(path: String, app: tauri::AppHandle) -> Result<Vec<u8>, String> {
     let cache_dir = app
         .path()
         .app_cache_dir()
         .map_err(|e| e.to_string())?
         .join("thumbnails");
     thumbnail::thumbnail(&PathBuf::from(path), &cache_dir)
+}
+
+/// 파일의 실제 OS 아이콘(PNG 바이트)을 반환한다. macOS는 NSWorkspace 아이콘.
+/// 프런트가 확장자별로 캐시하므로 확장자당 한 번만 호출된다.
+#[tauri::command]
+fn system_icon(path: String) -> Result<Vec<u8>, String> {
+    // systemicons가 deprecated된 stringWithCString: 로 임시파일 경로를 만들어
+    // 한글 등 비ASCII 파일명을 처리하지 못한다. 아이콘은 확장자에만 의존하므로
+    // (프런트도 확장자별 캐시) ASCII 합성 경로를 넘겨 그 버그를 우회한다.
+    let ext = std::path::Path::new(&path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("dat");
+    systemicons::get_icon(&format!("icon.{ext}"), 64).map_err(|e| e.message)
 }
 
 /// OS 파일 연결로 넘어온 대기 파일을 한 번 가져간다(있으면 소비).
@@ -186,7 +200,8 @@ pub fn run() {
             save_view_mode,
             save_last_folder,
             read_dir,
-            cover_thumbnail,
+            image_thumbnail,
+            system_icon,
             take_pending_file
         ])
         .build(tauri::generate_context!())

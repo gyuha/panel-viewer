@@ -12,9 +12,12 @@ export interface PersistedState {
   readingPositions: Record<string, number>;
 }
 
+export type EntryKind = "folder" | "archive" | "image";
+
 export interface DirEntry {
   name: string;
   path: string;
+  kind: EntryKind;
 }
 
 export interface DirListing {
@@ -29,9 +32,13 @@ export function openArchive(path: string): Promise<ArchiveInfo> {
   return invoke<ArchiveInfo>("open_archive", { path });
 }
 
-/** 현재 열린 아카이브의 index번째 페이지 이미지 URL(커스텀 프로토콜, 플랫폼별 형식 자동). */
-export function pageUrl(index: number): string {
-  return convertFileSrc(String(index), "pvpage");
+/**
+ * 현재 열린 아카이브의 index번째 페이지 이미지 URL(커스텀 프로토콜, 플랫폼별 형식 자동).
+ * token은 파일별로 달라지는 캐시버스팅 값 — 파일을 바꾸면 URL이 달라져 웹뷰가 이전 파일의
+ * 캐시 이미지를 재사용하지 않고 새로 로드한다(같은 index라도 파일이 다르면 다른 URL).
+ */
+export function pageUrl(index: number, token: string): string {
+  return `${convertFileSrc(String(index), "pvpage")}?v=${encodeURIComponent(token)}`;
 }
 
 /** 영속 상태 전체를 읽어온다. */
@@ -59,11 +66,28 @@ export function readDir(path: string | null): Promise<DirListing> {
   return invoke<DirListing>("read_dir", { path });
 }
 
-/** 커버 썸네일 JPEG를 blob URL로 만들어 반환한다(호출자가 revoke). */
-export async function coverThumbnailUrl(path: string): Promise<string> {
-  const bytes = await invoke<number[]>("cover_thumbnail", { path });
+/** 이미지 파일의 썸네일 JPEG를 blob URL로 만들어 반환한다(호출자가 revoke). */
+export async function imageThumbnailUrl(path: string): Promise<string> {
+  const bytes = await invoke<number[]>("image_thumbnail", { path });
   const blob = new Blob([new Uint8Array(bytes)], { type: "image/jpeg" });
   return URL.createObjectURL(blob);
+}
+
+// 시스템 파일 아이콘은 확장자별로 동일하므로 확장자 단위로 캐시한다(확장자당 백엔드 1회 호출).
+const iconCache = new Map<string, Promise<string>>();
+
+/** 파일의 실제 OS 아이콘 blob URL(확장자별 캐시, revoke하지 않고 세션 내 공유). */
+export function systemIconUrl(path: string): Promise<string> {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  let cached = iconCache.get(ext);
+  if (!cached) {
+    cached = invoke<number[]>("system_icon", { path }).then((bytes) => {
+      const blob = new Blob([new Uint8Array(bytes)], { type: "image/png" });
+      return URL.createObjectURL(blob);
+    });
+    iconCache.set(ext, cached);
+  }
+  return cached;
 }
 
 /** OS 파일 연결로 넘어온 대기 파일을 한 번 가져간다. */

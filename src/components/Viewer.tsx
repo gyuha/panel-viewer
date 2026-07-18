@@ -8,6 +8,7 @@ interface ViewerProps {
   pageCount: number;
   page: number;
   mode: ViewMode;
+  token: string;
   onPageChange: (page: number) => void;
   onModeChange: (mode: ViewMode) => void;
   onClose: () => void;
@@ -25,6 +26,7 @@ export function Viewer({
   pageCount,
   page,
   mode,
+  token,
   onPageChange,
   onModeChange,
   onClose,
@@ -65,11 +67,12 @@ export function Viewer({
       </header>
 
       {mode === "continuous" ? (
-        // key로 모드 전환 시 재마운트 → 현재 페이지로 스크롤
+        // key에 token 포함 → 파일 전환 시 재마운트되어 새 파일의 현재 페이지로 스크롤
         <ContinuousView
-          key="continuous"
+          key={`continuous-${token}`}
           pageCount={pageCount}
           page={page}
+          token={token}
           onPageChange={onPageChange}
         />
       ) : (
@@ -77,6 +80,7 @@ export function Viewer({
           pageCount={pageCount}
           page={page}
           mode={mode}
+          token={token}
           onPageChange={onPageChange}
         />
       )}

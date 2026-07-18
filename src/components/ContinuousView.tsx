@@ -4,6 +4,7 @@ import { pageUrl } from "../lib/api";
 interface ContinuousViewProps {
   pageCount: number;
   page: number;
+  token: string;
   onPageChange: (page: number) => void;
 }
 
@@ -11,7 +12,7 @@ interface ContinuousViewProps {
  * 연속 스크롤 모드. 세로로 페이지를 쌓아 폭 맞춤으로 보여준다.
  * 오프스크린 이미지는 네이티브 lazy 로딩으로 지연 로드해 대용량에서도 메모리 폭증을 막는다.
  */
-export function ContinuousView({ pageCount, page, onPageChange }: ContinuousViewProps) {
+export function ContinuousView({ pageCount, page, token, onPageChange }: ContinuousViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const initialPage = useRef(page); // 마운트 시점의 페이지로만 스크롤(이후 스크롤은 자유)
@@ -59,7 +60,7 @@ export function ContinuousView({ pageCount, page, onPageChange }: ContinuousView
         >
           <img
             className="cont-img"
-            src={pageUrl(i)}
+            src={pageUrl(i, token)}
             loading="lazy"
             decoding="async"
             alt={`${i + 1}`}

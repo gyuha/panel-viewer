@@ -6,11 +6,12 @@ interface PageViewProps {
   pageCount: number;
   page: number;
   mode: "ltr" | "rtl";
+  token: string;
   onPageChange: (page: number) => void;
 }
 
 /** 페이지 모드(한 장씩, 화면 맞춤). 좌→우/우→좌 방향에 따라 키·클릭 매핑이 바뀐다. */
-export function PageView({ pageCount, page, mode, onPageChange }: PageViewProps) {
+export function PageView({ pageCount, page, mode, token, onPageChange }: PageViewProps) {
   const goNext = useCallback(
     () => onPageChange(nextPage(page, pageCount)),
     [page, pageCount, onPageChange],
@@ -59,10 +60,10 @@ export function PageView({ pageCount, page, mode, onPageChange }: PageViewProps)
     [page + 1, page - 1].forEach((i) => {
       if (i >= 0 && i < pageCount) {
         const img = new Image();
-        img.src = pageUrl(i);
+        img.src = pageUrl(i, token);
       }
     });
-  }, [page, pageCount]);
+  }, [page, pageCount, token]);
 
   // 클릭 영역: 좌→우는 왼쪽=이전/오른쪽=다음, 우→좌는 반대
   const onLeftClick = mode === "rtl" ? goNext : goPrev;
@@ -72,7 +73,7 @@ export function PageView({ pageCount, page, mode, onPageChange }: PageViewProps)
     <div className="viewer-stage">
       <img
         className="viewer-page"
-        src={pageUrl(page)}
+        src={pageUrl(page, token)}
         alt={`${page + 1} / ${pageCount}`}
         draggable={false}
       />

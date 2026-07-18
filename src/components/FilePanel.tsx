@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { readDir, coverThumbnailUrl, type DirEntry, type DirListing } from "../lib/api";
+import {
+  readDir,
+  imageThumbnailUrl,
+  systemIconUrl,
+  type DirEntry,
+  type DirListing,
+} from "../lib/api";
 
 interface FilePanelProps {
   openedPath: string | null;
@@ -69,7 +75,10 @@ export function FilePanel({ openedPath, onOpenFile, initialFolder, onFolderChang
   );
 }
 
-/** 파일 한 줄 + 커버 썸네일(화면에 보일 때 지연 추출). */
+/**
+ * 파일 한 줄. 이미지 파일은 화면에 보일 때 지연 썸네일, 그 외(아카이브 등)는
+ * 확장자별 캐시된 시스템 파일 아이콘. 클릭으로 여는 것은 아카이브만.
+ */
 function FileRow({
   entry,
   active,
@@ -81,22 +90,23 @@ function FileRow({
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   const [thumb, setThumb] = useState<string | null>(null);
+  const [icon, setIcon] = useState<string | null>(null);
 
+  // 이미지: 화면에 보일 때 지연 썸네일 추출(언마운트 시 revoke)
   useEffect(() => {
+    if (entry.kind !== "image") return;
     const el = ref.current;
     if (!el) return;
     let url: string | null = null;
     const io = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting) {
         io.disconnect();
-        coverThumbnailUrl(entry.path)
+        imageThumbnailUrl(entry.path)
           .then((u) => {
             url = u;
             setThumb(u);
           })
-          .catch(() => {
-            /* 썸네일 실패는 무시(플레이스홀더 유지) */
-          });
+          .catch(() => {});
       }
     });
     io.observe(el);
@@ -104,17 +114,32 @@ function FileRow({
       io.disconnect();
       if (url) URL.revokeObjectURL(url);
     };
-  }, [entry.path]);
+  }, [entry.path, entry.kind]);
+
+  // 아카이브 등: 시스템 파일 아이콘(확장자별 캐시라 즉시·저비용)
+  useEffect(() => {
+    if (entry.kind === "image") return;
+    let alive = true;
+    systemIconUrl(entry.path)
+      .then((u) => alive && setIcon(u))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [entry.path, entry.kind]);
+
+  const openable = entry.kind === "archive";
+  const preview = entry.kind === "image" ? thumb : icon;
 
   return (
     <button
       ref={ref}
-      className={`file-row ${active ? "active" : ""}`}
-      onClick={() => onOpen(entry.path)}
+      className={`file-row ${active ? "active" : ""} ${openable ? "" : "static"}`}
+      onClick={openable ? () => onOpen(entry.path) : undefined}
       title={entry.name}
     >
       <span className="file-thumb">
-        {thumb ? <img src={thumb} alt="" /> : <span className="file-thumb-ph" />}
+        {preview ? <img src={preview} alt="" /> : <span className="file-thumb-ph" />}
       </span>
       <span className="file-name">{entry.name}</span>
     </button>

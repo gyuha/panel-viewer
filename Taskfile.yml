@@ -1,0 +1,157 @@
+# Panel Viewer — Tauri 2 + React + TS 코믹 뷰어
+#
+# go-task 러너 설정입니다. 설치: brew install go-task
+# 사용법:  task            (태스크 목록)
+#          task dev        (개발 모드 실행)
+#          task build:app  (앱 번들 빌드)
+version: "3"
+
+vars:
+  TAURI_DIR: src-tauri
+
+tasks:
+  default:
+    desc: "사용 가능한 태스크 목록 보기"
+    cmds:
+      - task --list
+    silent: true
+
+  # ───────────────────────── 셋업 ─────────────────────────
+  setup:
+    desc: "의존성 설치 (npm install)"
+    cmds:
+      - npm install
+
+  # ───────────────────────── 실행 ─────────────────────────
+  dev:
+    desc: "앱 실행 — Tauri 개발 모드(핫리로드)"
+    deps: [_needs-node-modules]
+    cmds:
+      - npm run tauri dev
+
+  web:
+    desc: "프런트엔드만 브라우저에서 실행 — Vite(네이티브 API 없음, UI 확인용)"
+    deps: [_needs-node-modules]
+    cmds:
+      - npm run dev
+
+  # ───────────────────────── 빌드 ─────────────────────────
+  build:
+    desc: "전체 번들 빌드 (.app + .dmg). 헤드리스 환경에선 DMG 단계가 실패할 수 있음 → 그럴 땐 build:app"
+    deps: [_needs-node-modules]
+    cmds:
+      - npm run tauri build
+
+  build:app:
+    desc: "앱 번들(.app)만 빌드 — DMG 제외(CI/헤드리스 권장). 산출물: src-tauri/target/release/bundle/macos"
+    deps: [_needs-node-modules]
+    cmds:
+      - npm run tauri build -- --bundles app
+
+  web:build:
+    desc: "프런트엔드만 빌드 (tsc + vite → dist/)"
+    deps: [_needs-node-modules]
+    cmds:
+      - npm run build
+
+  preview:
+    desc: "빌드된 프런트엔드 미리보기 (Vite preview)"
+    deps: [_needs-node-modules]
+    cmds:
+      - npm run preview
+
+  # ───────────────────────── 테스트 ─────────────────────────
+  test:
+    desc: "전체 테스트 — 프런트(Vitest) + Rust(cargo test)"
+    cmds:
+      - task: test:web
+      - task: test:rust
+
+  test:web:
+    desc: "프런트엔드 단위테스트 (Vitest 1회 실행)"
+    deps: [_needs-node-modules]
+    cmds:
+      - npm test
+
+  test:watch:
+    desc: "프런트엔드 테스트 워치 모드"
+    deps: [_needs-node-modules]
+    cmds:
+      - npm run test:watch
+
+  test:rust:
+    desc: "Rust 테스트 (cargo test)"
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo test
+
+  # ───────────────────────── 품질(타입·컴파일·포맷·린트) ─────────────────────────
+  check:
+    desc: "타입체크 + 컴파일 점검 (tsc --noEmit + cargo check)"
+    cmds:
+      - task: check:web
+      - task: check:rust
+
+  check:web:
+    desc: "TypeScript 타입 체크 (tsc --noEmit)"
+    deps: [_needs-node-modules]
+    cmds:
+      - npx tsc --noEmit
+
+  check:rust:
+    desc: "Rust 컴파일 점검 (cargo check)"
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo check
+
+  fmt:
+    desc: "Rust 코드 포맷 (cargo fmt)"
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo fmt
+
+  fmt:check:
+    desc: "Rust 포맷 위반 여부만 확인 (CI용)"
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo fmt --check
+
+  lint:
+    desc: "Rust 린트 (cargo clippy). 미설치 시: rustup component add clippy"
+    dir: "{{.TAURI_DIR}}"
+    preconditions:
+      - sh: cargo clippy --version
+        msg: "clippy가 없습니다. 'rustup component add clippy' 실행 후 다시 시도하세요."
+    cmds:
+      - cargo clippy -- -D warnings
+
+  # ───────────────────────── 정리 ─────────────────────────
+  clean:
+    desc: "빌드 산출물 정리 (dist + cargo target)"
+    cmds:
+      - task: clean:web
+      - task: clean:rust
+
+  clean:web:
+    desc: "프런트 빌드 산출물 삭제 (dist/)"
+    cmds:
+      - rm -rf dist
+
+  clean:rust:
+    desc: "Rust 빌드 산출물 삭제 (cargo clean)"
+    dir: "{{.TAURI_DIR}}"
+    cmds:
+      - cargo clean
+
+  clean:all:
+    desc: "빌드 산출물 + node_modules 까지 전부 삭제 (setup부터 다시)"
+    cmds:
+      - task: clean
+      - rm -rf node_modules
+
+  # ───────────────────────── 내부 헬퍼 ─────────────────────────
+  _needs-node-modules:
+    internal: true
+    preconditions:
+      - sh: test -d node_modules
+        msg: "의존성이 설치되지 않았습니다. 먼저 'task setup'을 실행하세요."

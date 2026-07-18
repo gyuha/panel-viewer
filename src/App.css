@@ -131,6 +131,12 @@
   background: var(--primary);
   color: var(--on-primary);
 }
+.file-row.static {
+  cursor: default;
+}
+.file-row.static:hover {
+  background: transparent;
+}
 .file-thumb {
   flex: 0 0 auto;
   width: 36px;
@@ -140,7 +146,7 @@
   justify-content: center;
   overflow: hidden;
   border-radius: var(--r-xs, 4px);
-  background: var(--surface-strong);
+  background: transparent;
 }
 .file-thumb img {
   max-width: 100%;
