@@ -1,66 +1,53 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  readDir,
-  imageThumbnailUrl,
-  systemIconUrl,
-  type DirEntry,
-  type DirListing,
-} from "../lib/api";
+import { useEffect, useRef, useState } from "react";
+import { imageThumbnailUrl, systemIconUrl, type DirEntry, type DirListing } from "../lib/api";
 
 interface FilePanelProps {
+  listing: DirListing | null;
+  error: string | null;
   openedPath: string | null;
+  onNavigate: (path: string) => void;
   onOpenFile: (path: string) => void;
-  initialFolder: string | null;
-  onFolderChange: (folder: string) => void;
   onOpenSettings: () => void;
+  onTogglePanel: () => void;
 }
 
-/** 왼쪽 파일 패널: 현재 폴더 한 단계(상위/하위 폴더 + 코믹 아카이브)를 평평한 목록으로. */
+/**
+ * 왼쪽 파일 패널(제어 컴포넌트). 현재 폴더의 목록은 App이 소유하고 props로 내려주며,
+ * 폴더 클릭은 onNavigate로 위임한다.
+ */
 export function FilePanel({
+  listing,
+  error,
   openedPath,
+  onNavigate,
   onOpenFile,
-  initialFolder,
-  onFolderChange,
   onOpenSettings,
+  onTogglePanel,
 }: FilePanelProps) {
-  const [listing, setListing] = useState<DirListing | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const navigate = useCallback(
-    async (path: string | null) => {
-      try {
-        const l = await readDir(path);
-        setListing(l);
-        setError(null);
-        onFolderChange(l.current);
-      } catch (e) {
-        setError(String(e));
-      }
-    },
-    [onFolderChange],
-  );
-
-  // 마운트 시 마지막 폴더(없으면 홈)로
-  useEffect(() => {
-    void navigate(initialFolder);
-    // 최초 1회만
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
     <aside className="panel">
-      <div className="panel-path" title={listing?.current}>
-        {listing ? shorten(listing.current) : "…"}
+      <div className="panel-head">
+        <button
+          className="panel-toggle-btn"
+          onClick={onTogglePanel}
+          title="파일 목록 숨기기 (/)"
+          aria-label="파일 목록 숨기기"
+        >
+          ☰
+        </button>
+        <div className="panel-path" title={listing?.current}>
+          {listing ? shorten(listing.current) : "…"}
+        </div>
       </div>
       <div className="panel-list">
         {listing?.parent && (
-          <button className="dir-row" onClick={() => navigate(listing.parent)}>
+          <button className="dir-row" onClick={() => onNavigate(listing.parent!)}>
             <span className="dir-icon">↩</span>
             <span className="dir-name">상위 폴더</span>
           </button>
         )}
         {listing?.folders.map((f) => (
-          <button key={f.path} className="dir-row" onClick={() => navigate(f.path)}>
+          <button key={f.path} className="dir-row" onClick={() => onNavigate(f.path)}>
             <span className="dir-icon">📁</span>
             <span className="dir-name">{f.name}</span>
           </button>

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  ACTIONS,
   DEFAULT_CUSTOM,
   resolve,
   findConflict,
@@ -53,6 +54,22 @@ describe("findConflict", () => {
 
   it("아무도 안 쓰는 키는 충돌 없음", () => {
     expect(findConflict("nextFile", "z", DEFAULT_CUSTOM)).toBeNull();
+  });
+});
+
+describe("파일 패널 토글 동작", () => {
+  it("togglePanel이 동작 목록에 있고 기본 커스텀 키는 '/'", () => {
+    expect(ACTIONS).toContain("togglePanel");
+    expect(DEFAULT_CUSTOM.togglePanel).toBe("/");
+  });
+
+  it("resolve는 togglePanel을 반환하지 않는다(App 전역에서 별도 처리)", () => {
+    expect(resolve("/", DEFAULT_CUSTOM, "page")).toBeNull();
+    expect(resolve("/", DEFAULT_CUSTOM, "continuous")).toBeNull();
+  });
+
+  it("'/'는 예약되어 다른 동작이 못 뺏는다(충돌 감지)", () => {
+    expect(findConflict("nextFile", "/", DEFAULT_CUSTOM)).toBe("togglePanel");
   });
 });
 

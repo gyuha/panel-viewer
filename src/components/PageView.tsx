@@ -1,7 +1,10 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { pageUrl } from "../lib/api";
-import { nextPage, prevPage } from "../lib/nav";
+import { nextPage, prevPage, wheelTurn } from "../lib/nav";
 import { resolve, type CustomKeys } from "../lib/keymap";
+
+/** 휠 페이지 전환 쿨다운(ms): 한 노치/제스처가 한 페이지가 되도록 억제. */
+const WHEEL_COOLDOWN_MS = 200;
 
 interface PageViewProps {
   pageCount: number;
@@ -29,6 +32,27 @@ export function PageView({
     () => onPageChange(prevPage(page, pageCount)),
     [page, pageCount, onPageChange],
   );
+
+  const stageRef = useRef<HTMLDivElement>(null);
+  const lastWheelAt = useRef(0);
+
+  // 마우스 휠로 페이지 넘김(아래=다음, 위=이전). 쿨다운으로 한 제스처에 과하게 안 넘어감.
+  // 스테이지에 직접 붙여(passive:false) preventDefault가 먹도록 한다. 설정 모달 열림 중엔 미발동.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!shortcutsEnabled) return;
+      const { turn, dir } = wheelTurn(e.deltaY, Date.now(), lastWheelAt.current, WHEEL_COOLDOWN_MS);
+      if (!turn) return;
+      e.preventDefault();
+      lastWheelAt.current = Date.now();
+      if (dir === 1) goNext();
+      else goPrev();
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [shortcutsEnabled, goNext, goPrev]);
 
   // 페이지 동작만 처리(파일 이동은 Viewer가 담당). 설정 모달 열림 중엔 미발동.
   useEffect(() => {
@@ -64,7 +88,7 @@ export function PageView({
   }, [page, pageCount, token]);
 
   return (
-    <div className="viewer-stage">
+    <div className="viewer-stage" ref={stageRef}>
       <img
         className="viewer-page"
         src={pageUrl(page, token)}

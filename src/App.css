@@ -56,16 +56,46 @@
   border-right: 1px solid var(--hairline);
   background: var(--canvas-soft);
 }
-.panel-path {
+.panel-head {
   flex: 0 0 auto;
-  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--hairline);
+}
+.panel-path {
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--muted);
-  border-bottom: 1px solid var(--hairline);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+/* 패널 토글 아이콘(패널 헤더 · 뷰어 툴바 · 빈 화면 공용) */
+.panel-toggle-btn,
+.panel-show-btn {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.panel-toggle-btn:hover,
+.panel-show-btn:hover {
+  background: var(--surface-strong);
+}
+/* 빈 화면에서 패널 숨김 시 좌상단 고정 */
+.panel-show-btn {
+  position: absolute;
+  top: var(--s-xs);
+  left: var(--s-xs);
 }
 .panel-list {
   flex: 1 1 auto;
@@ -283,6 +313,7 @@
 
 /* ---- 빈 상태 ---- */
 .empty {
+  position: relative;
   height: 100%;
   display: grid;
   place-items: center;

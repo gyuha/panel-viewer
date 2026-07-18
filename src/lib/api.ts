@@ -11,6 +11,7 @@ export interface PersistedState {
   viewMode: ViewMode;
   readingPositions: Record<string, number>;
   keybindings: Record<string, string>;
+  panelHidden: boolean;
 }
 
 export type EntryKind = "folder" | "archive" | "image";
@@ -65,6 +66,11 @@ export function saveLastFolder(folder: string): Promise<void> {
 /** 단축키 커스텀 키 맵(동작명→키)을 저장한다. */
 export function saveKeybindings(bindings: Record<string, string>): Promise<void> {
   return invoke("save_keybindings", { bindings });
+}
+
+/** 파일 패널 숨김 상태를 저장한다. */
+export function savePanelHidden(hidden: boolean): Promise<void> {
+  return invoke("save_panel_hidden", { hidden });
 }
 
 /** 폴더 한 단계(하위 폴더 + 코믹 아카이브)를 읽는다. null이면 홈 디렉터리. */

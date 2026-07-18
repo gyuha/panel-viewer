@@ -29,6 +29,9 @@ pub struct PersistedState {
     /// 프런트가 기본값과 병합한다.
     #[serde(default)]
     pub keybindings: HashMap<String, String>,
+    /// 파일 패널을 숨긴 상태인지. 필드가 없으면(구버전) false(표시)로 로드.
+    #[serde(default)]
+    pub panel_hidden: bool,
 }
 
 /// 파일에서 상태를 읽는다. 파일이 없거나 깨졌으면 기본값을 돌려준다(뷰어는 절대 죽지 않는다).
@@ -66,6 +69,7 @@ mod tests {
             view_mode: ViewMode::Continuous,
             reading_positions: HashMap::new(),
             keybindings: HashMap::new(),
+            panel_hidden: true,
         };
         s.reading_positions.insert("/a/b.cbz".into(), 37);
         s.reading_positions.insert("/a/c.cbr".into(), 4);
@@ -78,12 +82,13 @@ mod tests {
         assert_eq!(loaded.view_mode, ViewMode::Continuous);
         assert_eq!(loaded.reading_positions.get("/a/b.cbz"), Some(&37));
         assert_eq!(loaded.keybindings.get("nextFile"), Some(&".".to_string()));
+        assert!(loaded.panel_hidden);
     }
 
     #[test]
-    fn old_json_without_keybindings_loads_empty_map() {
-        let p = tmp_file("no_keybindings.json");
-        // keybindings 필드가 없는 구버전 상태
+    fn old_json_without_new_fields_loads_defaults() {
+        let p = tmp_file("no_new_fields.json");
+        // keybindings·panelHidden 필드가 없는 구버전 상태
         std::fs::write(
             &p,
             br#"{"lastFolder":null,"viewMode":"page","readingPositions":{"/a.cbz":3}}"#,
@@ -91,6 +96,7 @@ mod tests {
         .unwrap();
         let loaded = load(&p);
         assert!(loaded.keybindings.is_empty());
+        assert!(!loaded.panel_hidden); // 기본값 false(표시)
         assert_eq!(loaded.reading_positions.get("/a.cbz"), Some(&3));
     }
 

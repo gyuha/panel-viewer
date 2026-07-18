@@ -102,6 +102,15 @@ fn save_keybindings(
     let _ = state::save(&file, &data);
 }
 
+/// 파일 패널 숨김 상태를 저장한다.
+#[tauri::command]
+fn save_panel_hidden(hidden: bool, store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.panel_hidden = hidden;
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
 /// 폴더 한 단계를 읽는다. path가 없으면 홈 디렉터리를 연다.
 #[tauri::command]
 fn read_dir(path: Option<String>, app: tauri::AppHandle) -> Result<fs::DirListing, String> {
@@ -212,6 +221,7 @@ pub fn run() {
             save_view_mode,
             save_last_folder,
             save_keybindings,
+            save_panel_hidden,
             read_dir,
             image_thumbnail,
             system_icon,

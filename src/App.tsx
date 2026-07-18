@@ -11,10 +11,13 @@ import {
   takePendingFile,
   readDir,
   saveKeybindings,
+  savePanelHidden,
   type ArchiveInfo,
+  type DirListing,
 } from "./lib/api";
 import type { ViewMode } from "./lib/nav";
 import { DEFAULT_CUSTOM, type Action, type CustomKeys } from "./lib/keymap";
+import { indexInFolder } from "./lib/folder";
 import { Viewer } from "./components/Viewer";
 import { FilePanel } from "./components/FilePanel";
 import { SettingsModal } from "./components/SettingsModal";
@@ -35,7 +38,6 @@ function dirname(p: string): string {
 
 function App() {
   const [ready, setReady] = useState(false);
-  const [initialFolder, setInitialFolder] = useState<string | null>(null);
   const [info, setInfo] = useState<ArchiveInfo | null>(null);
   const [openedPath, setOpenedPath] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -44,42 +46,54 @@ function App() {
   const [dragOver, setDragOver] = useState(false);
   const [customKeys, setCustomKeys] = useState<CustomKeys>(DEFAULT_CUSTOM);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [panelHidden, setPanelHidden] = useState(false);
 
   const [fileToken, setFileToken] = useState("");
-  // 현재 파일과 같은 폴더의 아카이브 목록(정렬됨) — 이전/다음 파일 이동용
-  const [siblings, setSiblings] = useState<string[]>([]);
+  // 현재 폴더 단일 소스: 패널 목록이자 이전/다음 파일 이동의 범위
+  const [listing, setListing] = useState<DirListing | null>(null);
+  const [folderError, setFolderError] = useState<string | null>(null);
   const readingPositions = useRef<Record<string, number>>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openSeq = useRef(0);
-  const siblingsDir = useRef<string | null>(null);
   const opening = useRef(false); // 재진입 가드: 여는 중엔 겹친 열기 요청 무시
+
+  // 현재 폴더 이동(패널 폴더 클릭 등). 목록을 읽어 현재 폴더로 설정하고 마지막 폴더로 저장.
+  const navigate = useCallback(async (path: string | null) => {
+    try {
+      const l = await readDir(path);
+      setListing(l);
+      setFolderError(null);
+      void saveLastFolder(l.current);
+    } catch (e) {
+      setFolderError(String(e));
+    }
+  }, []);
 
   const openPath = useCallback(async (path: string) => {
     if (opening.current) return;
     opening.current = true;
     try {
       const i = await openArchive(path);
+      // 현재 폴더를 열린 파일의 폴더로 동기화하고, 파일명(NFC) 매칭으로 정규 경로를 얻는다.
+      let canonical = path;
+      try {
+        const l = await readDir(dirname(path));
+        setListing(l);
+        setFolderError(null);
+        void saveLastFolder(l.current);
+        const archives = l.files.filter((f) => f.kind === "archive").map((f) => f.path);
+        const idx = indexInFolder(archives, path);
+        if (idx >= 0) canonical = archives[idx];
+      } catch {
+        /* 폴더를 못 읽어도 파일 자체는 연다 */
+      }
       openSeq.current += 1;
       setFileToken(String(openSeq.current));
-      setOpenedPath(path);
+      setOpenedPath(canonical);
       setInfo(i);
-      const saved = readingPositions.current[path] ?? 0;
+      const saved = readingPositions.current[canonical] ?? 0;
       setPage(saved < i.pageCount ? saved : 0);
       setError(null);
-
-      // 같은 폴더의 아카이브 형제 목록 로드(폴더가 바뀔 때만)
-      const dir = dirname(path);
-      if (siblingsDir.current !== dir) {
-        siblingsDir.current = dir;
-        try {
-          const listing = await readDir(dir);
-          setSiblings(
-            listing.files.filter((f) => f.kind === "archive").map((f) => f.path),
-          );
-        } catch {
-          setSiblings([]);
-        }
-      }
     } catch (e) {
       setError(String(e));
     } finally {
@@ -92,11 +106,13 @@ function App() {
     void loadState().then((s) => {
       setMode(s.viewMode);
       readingPositions.current = s.readingPositions ?? {};
-      setInitialFolder(s.lastFolder);
       // 저장된 커스텀 키를 기본값과 병합(없는 동작은 기본값 유지)
       setCustomKeys({ ...DEFAULT_CUSTOM, ...(s.keybindings ?? {}) });
+      setPanelHidden(s.panelHidden ?? false);
       setReady(true);
+      void navigate(s.lastFolder); // 현재 폴더를 마지막 폴더(없으면 홈)로
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setBinding = useCallback((action: Action, key: string) => {
@@ -111,6 +127,25 @@ function App() {
     setCustomKeys(DEFAULT_CUSTOM);
     void saveKeybindings(DEFAULT_CUSTOM);
   }, []);
+
+  const togglePanel = useCallback(() => {
+    const next = !panelHidden;
+    setPanelHidden(next);
+    void savePanelHidden(next);
+  }, [panelHidden]);
+
+  // 전역 '/'(또는 재지정된 키): 파일 안 열려 있어도 동작. 설정 모달 열림 중엔 미발동.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (settingsOpen) return;
+      if (customKeys.togglePanel !== "" && e.key === customKeys.togglePanel) {
+        e.preventDefault();
+        togglePanel();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [settingsOpen, customKeys, togglePanel]);
 
   // 파일 연결로 넘어온 파일 처리(시작 시 대기 파일 + 실행 중 open-archive 이벤트)
   useEffect(() => {
@@ -152,10 +187,6 @@ function App() {
     void saveViewMode(next);
   }, []);
 
-  const handleFolderChange = useCallback((folder: string) => {
-    void saveLastFolder(folder);
-  }, []);
-
   // 창 전체 드래그 앤 드롭
   useEffect(() => {
     const unlisten = getCurrentWebview().onDragDropEvent((event) => {
@@ -180,20 +211,27 @@ function App() {
     return <div className="boot" />;
   }
 
-  // 현재 파일 기준 이전/다음 파일
-  const currentIndex = openedPath ? siblings.indexOf(openedPath) : -1;
+  // 현재 폴더의 아카이브 목록 기준 이전/다음 파일
+  const folderArchives = listing
+    ? listing.files.filter((f) => f.kind === "archive").map((f) => f.path)
+    : [];
+  const currentIndex = openedPath ? indexInFolder(folderArchives, openedPath) : -1;
   const hasPrevFile = currentIndex > 0;
-  const hasNextFile = currentIndex >= 0 && currentIndex < siblings.length - 1;
+  const hasNextFile = currentIndex >= 0 && currentIndex < folderArchives.length - 1;
 
   return (
     <div className={`app-shell ${dragOver ? "drag" : ""}`}>
-      <FilePanel
-        openedPath={openedPath}
-        onOpenFile={openPath}
-        initialFolder={initialFolder}
-        onFolderChange={handleFolderChange}
-        onOpenSettings={() => setSettingsOpen(true)}
-      />
+      {!panelHidden && (
+        <FilePanel
+          listing={listing}
+          error={folderError}
+          openedPath={openedPath}
+          onNavigate={navigate}
+          onOpenFile={openPath}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onTogglePanel={togglePanel}
+        />
+      )}
       <div className="app-main">
         {info ? (
           <Viewer
@@ -204,13 +242,15 @@ function App() {
             token={fileToken}
             customKeys={customKeys}
             shortcutsEnabled={!settingsOpen}
+            panelHidden={panelHidden}
+            onTogglePanel={togglePanel}
             hasPrevFile={hasPrevFile}
             hasNextFile={hasNextFile}
             onPrevFile={() => {
-              if (hasPrevFile) void openPath(siblings[currentIndex - 1]);
+              if (hasPrevFile) void openPath(folderArchives[currentIndex - 1]);
             }}
             onNextFile={() => {
-              if (hasNextFile) void openPath(siblings[currentIndex + 1]);
+              if (hasNextFile) void openPath(folderArchives[currentIndex + 1]);
             }}
             onPageChange={handlePageChange}
             onModeChange={handleModeChange}
@@ -221,6 +261,16 @@ function App() {
           />
         ) : (
           <div className="empty">
+            {panelHidden && (
+              <button
+                className="panel-show-btn"
+                onClick={togglePanel}
+                title="파일 목록 (/)"
+                aria-label="파일 목록 보이기"
+              >
+                ☰
+              </button>
+            )}
             <div className="empty-card">
               <h1 className="empty-title">Panel Viewer</h1>
               <p className="empty-sub">왼쪽에서 파일을 고르거나 파일을 열어보세요.</p>

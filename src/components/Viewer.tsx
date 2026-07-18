@@ -12,6 +12,8 @@ interface ViewerProps {
   token: string;
   customKeys: CustomKeys;
   shortcutsEnabled: boolean;
+  panelHidden: boolean;
+  onTogglePanel: () => void;
   hasPrevFile: boolean;
   hasNextFile: boolean;
   onPrevFile: () => void;
@@ -35,6 +37,8 @@ export function Viewer({
   token,
   customKeys,
   shortcutsEnabled,
+  panelHidden,
+  onTogglePanel,
   hasPrevFile,
   hasNextFile,
   onPrevFile,
@@ -67,6 +71,16 @@ export function Viewer({
   return (
     <div className="viewer no-select">
       <header className="viewer-bar">
+        {panelHidden && (
+          <button
+            className="panel-toggle-btn"
+            onClick={onTogglePanel}
+            title="파일 목록 보이기 (/)"
+            aria-label="파일 목록 보이기"
+          >
+            ☰
+          </button>
+        )}
         <button className="btn-ghost" onClick={onClose} title="닫기 (Esc)">
           ‹ 닫기
         </button>
