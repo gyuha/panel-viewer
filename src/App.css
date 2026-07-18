@@ -310,6 +310,18 @@
   justify-content: flex-end;
   margin-top: var(--s-base);
 }
+/* 고정(재지정 불가) 단축키 안내 */
+.fixed-keys {
+  margin-top: var(--s-base);
+}
+.fixed-keys kbd {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--canvas-soft);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-sm);
+  padding: 1px 6px;
+}
 
 /* ---- 빈 상태 ---- */
 .empty {

@@ -73,6 +73,22 @@ describe("파일 패널 토글 동작", () => {
   });
 });
 
+describe("앱 종료 동작", () => {
+  it("quitApp이 동작 목록에 있고 기본 커스텀 키는 'x'", () => {
+    expect(ACTIONS).toContain("quitApp");
+    expect(DEFAULT_CUSTOM.quitApp).toBe("x");
+  });
+
+  it("resolve는 quitApp을 반환하지 않는다(App 전역에서 별도 처리)", () => {
+    expect(resolve("x", DEFAULT_CUSTOM, "page")).toBeNull();
+    expect(resolve("x", DEFAULT_CUSTOM, "continuous")).toBeNull();
+  });
+
+  it("'x'는 예약되어 다른 동작이 못 뺏는다(충돌 감지)", () => {
+    expect(findConflict("nextFile", "x", DEFAULT_CUSTOM)).toBe("quitApp");
+  });
+});
+
 describe("isAssignableKey", () => {
   it("단일 키는 지정 가능", () => {
     expect(isAssignableKey({ key: ",", ctrlKey: false, altKey: false, metaKey: false })).toBe(true);

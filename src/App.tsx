@@ -137,12 +137,20 @@ function App() {
     void savePanelHidden(next);
   }, [panelHidden]);
 
-  // 전역 단축키: x(앱 종료) · '/'(패널 토글, 재지정 가능). 파일 안 열려 있어도 동작.
-  // 설정 모달 열림 중엔 미발동.
+  // 전역 단축키: Cmd+,(메뉴 열기=설정, 고정) · 앱 종료 · 패널 토글(둘 다 재지정 가능).
+  // 파일 안 열려 있어도 동작. 설정 모달 열림 중엔 미발동.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (settingsOpen) return;
-      if (e.key === "x") {
+      // 메뉴 열기: macOS 표준 Cmd+, (고정, 재지정 불가)
+      if (e.metaKey && e.key === ",") {
+        e.preventDefault();
+        setSettingsOpen(true);
+        return;
+      }
+      // 단일 키 커스텀 동작은 수식 키 없이만(Cmd+x 등으로 오발동 방지)
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (customKeys.quitApp !== "" && e.key === customKeys.quitApp) {
         e.preventDefault();
         void quitApp();
         return;

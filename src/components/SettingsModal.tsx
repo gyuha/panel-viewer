@@ -127,6 +127,10 @@ export function SettingsModal({ customKeys, onSet, onReset, onClose }: SettingsM
 
         {message && <p className="modal-error">{message}</p>}
 
+        <p className="modal-hint fixed-keys">
+          고정 단축키: <kbd>⌘ ,</kbd> 메뉴 열기 · <kbd>Esc</kbd> 닫기
+        </p>
+
         <footer className="modal-foot">
           <button className="btn-ghost" onClick={onReset}>
             기본값 복원

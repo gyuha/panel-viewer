@@ -8,7 +8,8 @@ export type Action =
   | "lastPage"
   | "nextFile"
   | "prevFile"
-  | "togglePanel";
+  | "togglePanel"
+  | "quitApp";
 
 export const ACTIONS: Action[] = [
   "nextPage",
@@ -18,6 +19,7 @@ export const ACTIONS: Action[] = [
   "nextFile",
   "prevFile",
   "togglePanel",
+  "quitApp",
 ];
 
 export const ACTION_LABELS: Record<Action, string> = {
@@ -28,6 +30,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   nextFile: "다음 파일",
   prevFile: "이전 파일",
   togglePanel: "파일 패널 토글",
+  quitApp: "앱 종료",
 };
 
 /** 항상 동작하는 표준 키(재지정 불가). KeyboardEvent.key 값. */
@@ -39,6 +42,7 @@ export const STANDARD_KEYS: Record<Action, string[]> = {
   nextFile: [],
   prevFile: [],
   togglePanel: [],
+  quitApp: [],
 };
 
 /** 동작 → 커스텀 키("" = 없음). */
@@ -52,6 +56,7 @@ export const DEFAULT_CUSTOM: CustomKeys = {
   nextFile: ".",
   prevFile: ",",
   togglePanel: "/",
+  quitApp: "x",
 };
 
 const PAGE_ACTIONS: Action[] = ["nextPage", "prevPage", "firstPage", "lastPage"];
