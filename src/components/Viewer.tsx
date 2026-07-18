@@ -82,10 +82,6 @@ export function Viewer({
             ☰
           </button>
         )}
-        <button className="btn-ghost" onClick={onClose} title="닫기 (Esc)">
-          ‹ 닫기
-        </button>
-
         <div className="file-nav" role="group" aria-label="파일 이동">
           <button
             className="file-nav-btn"
