@@ -49,6 +49,10 @@ export function ContinuousView({
     let raf = 0;
 
     const tick = () => {
+      // 지연 로딩으로 콘텐츠 높이(scrollHeight)가 바뀌어도 target을 현재 max로 재클램프한다.
+      // 이게 없으면 도달 불가한 target에 갇혀 animating이 영구히 true가 되고, 루프가 매 프레임
+      // scrollTop을 덮어써 키 스크롤이 계속 죽는다.
+      target = Math.max(0, Math.min(el.scrollHeight - el.clientHeight, target));
       const cur = el.scrollTop;
       const d = target - cur;
       if (Math.abs(d) < 0.5) {
@@ -61,6 +65,7 @@ export function ContinuousView({
     };
 
     const onWheel = (e: WheelEvent) => {
+      el.focus({ preventScroll: true }); // 휠 조작 중 포커스를 컨테이너에 유지 → 이후 키 스크롤이 계속 먹힘
       const { seamless: sl, hasPrevFile: hp, hasNextFile: hn, onOpenAdjacent: open } = cb.current;
       // 경계 + 이어보기: 다음/이전 파일로 전환(쿨다운)
       if (sl) {
@@ -99,9 +104,20 @@ export function ContinuousView({
       }
     };
 
+    // 키 입력이 들어오면 진행 중인 휠 관성 애니메이션을 즉시 중단 → rAF 루프가 scrollTop을
+    // 계속 덮어써 네이티브 키 스크롤(스페이스/화살표/PageUp·Down)을 무력화하는 것을 막는다.
+    const stopAnim = () => {
+      if (animating) {
+        cancelAnimationFrame(raf);
+        animating = false;
+      }
+    };
+
     el.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("keydown", stopAnim);
     return () => {
       el.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", stopAnim);
       cancelAnimationFrame(raf);
     };
   }, []);
@@ -160,7 +176,13 @@ export function ContinuousView({
   }, [pageCount, onPageChange]);
 
   return (
-    <div className={`continuous fit-${fit}`} ref={containerRef} tabIndex={-1} onKeyDown={onKeyDown}>
+    <div
+      className={`continuous fit-${fit}`}
+      ref={containerRef}
+      tabIndex={-1}
+      onKeyDown={onKeyDown}
+      onMouseDown={() => containerRef.current?.focus({ preventScroll: true })}
+    >
       {Array.from({ length: pageCount }, (_, i) => (
         <div
           className="cont-page"
