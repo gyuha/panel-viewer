@@ -656,6 +656,11 @@
   background: var(--canvas);
   scroll-behavior: auto;
 }
+/* 키보드 스크롤을 위해 포커스 가능(tabIndex=-1)하지만 포커스 링은 숨김 */
+.continuous:focus,
+.continuous:focus-visible {
+  outline: none;
+}
 /* 오른쪽 스크롤바를 얇게(기본의 약 1/3) */
 .continuous::-webkit-scrollbar {
   width: 2px;
