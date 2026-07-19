@@ -67,6 +67,20 @@ function actionsFor(mode: ViewMode): Action[] {
   return mode === "continuous" ? FILE_ACTIONS : [...PAGE_ACTIONS, ...FILE_ACTIONS];
 }
 
+/**
+ * 단축키 비교용 키를 정규화한다. 한글 등 IME 레이아웃에서 물리 영문 키가 자모로 들어오는
+ * 문제(예: 물리 X → "ㅌ")를 물리 키 위치(e.code)로 보정한다.
+ * e.key가 ASCII 영문자가 아니고 e.code가 "KeyA"~"KeyZ"면 대응 소문자 영문자를, 그 외엔 e.key를 그대로 돌려준다.
+ */
+export function eventKey(e: { key: string; code: string }): string {
+  const isAsciiLetter = e.key.length === 1 && /[a-zA-Z]/.test(e.key);
+  if (!isAsciiLetter && e.code.length === 4 && e.code.startsWith("Key")) {
+    const c = e.code.charCodeAt(3);
+    if (c >= 65 && c <= 90) return e.code[3].toLowerCase();
+  }
+  return e.key;
+}
+
 /** 눌린 키를 동작으로 해석한다(표준 키 + 커스텀 키, 모드별 유효 동작만). 없으면 null. */
 export function resolve(key: string, custom: CustomKeys, mode: ViewMode): Action | null {
   for (const a of actionsFor(mode)) {

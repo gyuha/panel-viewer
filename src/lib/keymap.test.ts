@@ -3,10 +3,25 @@ import {
   ACTIONS,
   DEFAULT_CUSTOM,
   resolve,
+  eventKey,
   findConflict,
   isAssignableKey,
   type CustomKeys,
 } from "./keymap";
+
+describe("eventKey", () => {
+  it("한글 IME에서 물리 영문 키(e.code=KeyX)를 소문자 영문자로 보정한다", () => {
+    // 두벌식에서 물리 X는 'ㅌ'로 들어오지만 e.code는 KeyX 유지
+    expect(eventKey({ key: "ㅌ", code: "KeyX" })).toBe("x");
+    expect(eventKey({ key: "Process", code: "KeyX" })).toBe("x");
+  });
+
+  it("영문 입력·비영문 키는 e.key를 그대로 둔다", () => {
+    expect(eventKey({ key: "x", code: "KeyX" })).toBe("x");
+    expect(eventKey({ key: "ArrowRight", code: "ArrowRight" })).toBe("ArrowRight");
+    expect(eventKey({ key: ".", code: "Period" })).toBe(".");
+  });
+});
 
 describe("resolve", () => {
   it("표준 키를 동작으로 해석한다 (한장 모드)", () => {

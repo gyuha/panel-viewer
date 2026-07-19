@@ -3,6 +3,7 @@ import {
   ACTIONS,
   ACTION_LABELS,
   STANDARD_KEYS,
+  eventKey,
   findConflict,
   isAssignableKey,
   type Action,
@@ -129,12 +130,13 @@ export function SettingsModal({
         setMessage("조합키나 수식 키는 지정할 수 없습니다. 단일 키를 눌러주세요.");
         return;
       }
-      const conflict = findConflict(capturing, e.key, customKeys);
+      const k = eventKey(e);
+      const conflict = findConflict(capturing, k, customKeys);
       if (conflict) {
-        setMessage(`'${keyLabel(e.key)}' 키는 이미 '${ACTION_LABELS[conflict]}'에 사용 중입니다.`);
+        setMessage(`'${keyLabel(k)}' 키는 이미 '${ACTION_LABELS[conflict]}'에 사용 중입니다.`);
         return;
       }
-      onSet(capturing, e.key);
+      onSet(capturing, k);
       setCapturing(null);
       setMessage(null);
     };

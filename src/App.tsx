@@ -30,7 +30,7 @@ import {
   type HistoryEntry,
 } from "./lib/api";
 import type { ViewMode } from "./lib/nav";
-import { DEFAULT_CUSTOM, type Action, type CustomKeys } from "./lib/keymap";
+import { DEFAULT_CUSTOM, eventKey, type Action, type CustomKeys } from "./lib/keymap";
 import { basename, indexInFolder } from "./lib/folder";
 import { Viewer } from "./components/Viewer";
 import { FilePanel } from "./components/FilePanel";
@@ -192,12 +192,13 @@ function App() {
       }
       // 단일 키 커스텀 동작은 수식 키 없이만(Cmd+x 등으로 오발동 방지)
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (customKeys.quitApp !== "" && e.key === customKeys.quitApp) {
+      const k = eventKey(e);
+      if (customKeys.quitApp !== "" && k === customKeys.quitApp) {
         e.preventDefault();
         void quitApp();
         return;
       }
-      if (customKeys.togglePanel !== "" && e.key === customKeys.togglePanel) {
+      if (customKeys.togglePanel !== "" && k === customKeys.togglePanel) {
         e.preventDefault();
         togglePanel();
       }

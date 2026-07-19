@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { pageUrl, type PageFit } from "../lib/api";
 import { seamlessTurn, wheelTurn } from "../lib/nav";
-import { resolve, type CustomKeys } from "../lib/keymap";
+import { resolve, eventKey, type CustomKeys } from "../lib/keymap";
 
 /** 휠 페이지 전환 쿨다운(ms): 한 노치/제스처가 한 페이지가 되도록 억제. */
 const WHEEL_COOLDOWN_MS = 200;
@@ -71,7 +71,7 @@ export function PageView({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!shortcutsEnabled) return;
-      const action = resolve(e.key, customKeys, "page");
+      const action = resolve(eventKey(e), customKeys, "page");
       if (action === "nextPage") {
         e.preventDefault();
         goNext();

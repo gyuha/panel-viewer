@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { ViewMode } from "../lib/nav";
 import type { PageFit, ContinuousFit } from "../lib/api";
-import { resolve, type CustomKeys } from "../lib/keymap";
+import { resolve, eventKey, type CustomKeys } from "../lib/keymap";
 import { PageView } from "./PageView";
 import { ContinuousView } from "./ContinuousView";
 
@@ -65,7 +65,7 @@ export function Viewer({
         onClose();
         return;
       }
-      const action = resolve(e.key, customKeys, mode);
+      const action = resolve(eventKey(e), customKeys, mode);
       if (action === "nextFile") {
         e.preventDefault();
         onNextFile();
