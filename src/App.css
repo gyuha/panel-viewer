@@ -563,12 +563,10 @@
 .continuous.fit-original {
   overflow-x: auto;
 }
-.continuous.fit-original .cont-page {
-  justify-content: flex-start;
-}
 .continuous.fit-original .cont-img {
   width: auto;
   max-width: none;
+  margin: 0 auto; /* 맞으면 가운데, 넘치면 왼쪽부터 스크롤 */
 }
 
 .viewer-stage {
@@ -595,15 +593,11 @@
 .viewer-stage.fit-original {
   overflow: auto;
 }
-.viewer-stage.fit-width {
-  align-items: flex-start;
-}
-.viewer-stage.fit-height {
-  justify-content: flex-start;
-}
-.viewer-stage.fit-original {
-  align-items: flex-start;
-  justify-content: flex-start;
+/* 맞으면 가운데, 넘치면 시작(마진 auto→0)으로 붙어 스크롤 가능 — flex center의 좌측 클리핑 회피 */
+.viewer-stage.fit-width .viewer-page,
+.viewer-stage.fit-height .viewer-page,
+.viewer-stage.fit-original .viewer-page {
+  margin: auto;
 }
 .viewer-stage.fit-width .viewer-page {
   width: 100%;
