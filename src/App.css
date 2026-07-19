@@ -233,6 +233,8 @@
   border: 1px solid var(--hairline-strong);
   border-radius: var(--r-lg);
   width: min(520px, 92vw);
+  /* 탭 전환 시 높이가 튀지 않게 가장 큰 단축키 탭(~653px) 기준으로 하한 지정. 작은 창에선 86vh로 캡 */
+  min-height: min(660px, 86vh);
   max-height: 86vh;
   overflow-y: auto;
   padding: var(--s-lg);
