@@ -19,15 +19,19 @@ import {
   saveLastFile,
   saveOpenLastFile,
   saveSeamless,
+  recordHistory,
+  deleteHistory,
+  resetHistory,
   quitApp,
   type ArchiveInfo,
   type DirListing,
   type PageFit,
   type ContinuousFit,
+  type HistoryEntry,
 } from "./lib/api";
 import type { ViewMode } from "./lib/nav";
 import { DEFAULT_CUSTOM, type Action, type CustomKeys } from "./lib/keymap";
-import { indexInFolder } from "./lib/folder";
+import { basename, indexInFolder } from "./lib/folder";
 import { Viewer } from "./components/Viewer";
 import { FilePanel } from "./components/FilePanel";
 import { SettingsModal } from "./components/SettingsModal";
@@ -61,6 +65,7 @@ function App() {
   const [continuousFit, setContinuousFit] = useState<ContinuousFit>("width");
   const [openLastFile, setOpenLastFile] = useState(true);
   const [seamless, setSeamless] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   const [fileToken, setFileToken] = useState("");
   // 현재 폴더 단일 소스: 패널 목록이자 이전/다음 파일 이동의 범위
@@ -114,6 +119,15 @@ function App() {
         }
         setError(null);
         void saveLastFile(canonical); // 마지막으로 연 파일 기억
+        // 히스토리 기록(백엔드 영속 + 즉시 반영용 로컬 미러: 중복 제거→맨 위→상한 500)
+        void recordHistory(canonical);
+        setHistory((prev) => {
+          const filtered = prev.filter((e) => e.path !== canonical);
+          return [
+            { path: canonical, name: basename(canonical), openedAt: Date.now() },
+            ...filtered,
+          ].slice(0, 500);
+        });
       } catch (e) {
         if (!opts?.silent) setError(String(e)); // 마지막 파일 자동 열기 실패는 조용히 스킵
       } finally {
@@ -135,6 +149,7 @@ function App() {
       setContinuousFit(s.continuousFit ?? "width");
       setOpenLastFile(s.openLastFile ?? true);
       setSeamless(s.seamless ?? false);
+      setHistory(s.history ?? []);
       setReady(true);
       void navigate(s.lastFolder); // 현재 폴더를 마지막 폴더(없으면 홈)로
       // 초기 열기: 파일 연결/CLI 대기 파일 우선, 없으면 옵션 켜져 있을 때 마지막 파일(조용히)
@@ -248,6 +263,16 @@ function App() {
     void saveSeamless(enabled);
   }, []);
 
+  const handleDeleteHistory = useCallback((path: string) => {
+    setHistory((prev) => prev.filter((e) => e.path !== path));
+    void deleteHistory(path);
+  }, []);
+
+  const handleResetHistory = useCallback(() => {
+    setHistory([]);
+    void resetHistory();
+  }, []);
+
   // 창 전체 드래그 앤 드롭
   useEffect(() => {
     const unlisten = getCurrentWebview().onDragDropEvent((event) => {
@@ -305,8 +330,11 @@ function App() {
           listing={listing}
           error={folderError}
           openedPath={openedPath}
+          history={history}
           onNavigate={navigate}
           onOpenFile={openPath}
+          onDeleteHistory={handleDeleteHistory}
+          onResetHistory={handleResetHistory}
           onOpenSettings={() => setSettingsOpen(true)}
           onTogglePanel={togglePanel}
         />

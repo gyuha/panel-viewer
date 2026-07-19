@@ -46,6 +46,27 @@ pub enum ContinuousFit {
     Width,
 }
 
+/// 히스토리 한 항목: 연 아카이브 경로 · 표시용 파일명 · 마지막으로 연 시각(epoch ms).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryEntry {
+    pub path: String,
+    pub name: String,
+    pub opened_at: u64,
+}
+
+/// 히스토리에 항목 추가: 같은 path는 제거하고 맨 앞에 넣은 뒤 cap개로 자른다(최신순 유지).
+pub fn push_history(
+    mut history: Vec<HistoryEntry>,
+    entry: HistoryEntry,
+    cap: usize,
+) -> Vec<HistoryEntry> {
+    history.retain(|e| e.path != entry.path);
+    history.insert(0, entry);
+    history.truncate(cap);
+    history
+}
+
 fn default_true() -> bool {
     true
 }
@@ -85,6 +106,9 @@ pub struct PersistedState {
     /// 파일 이어보기(페이지 경계에서 인접 파일 자동 열기).
     #[serde(default)]
     pub seamless: bool,
+    /// 열람 히스토리(최신순). 필드가 없으면(구버전) 빈 목록으로 로드.
+    #[serde(default)]
+    pub history: Vec<HistoryEntry>,
 }
 
 impl Default for PersistedState {
@@ -101,6 +125,7 @@ impl Default for PersistedState {
             last_file: None,
             open_last_file: true,
             seamless: false,
+            history: Vec::new(),
         }
     }
 }
@@ -152,6 +177,7 @@ mod tests {
             last_file: None,
             open_last_file: true,
             seamless: false,
+            history: Vec::new(),
         };
         s.reading_positions.insert("/a/b.cbz".into(), 37);
         s.reading_positions.insert("/a/c.cbr".into(), 4);
@@ -304,6 +330,54 @@ mod tests {
         assert!(l2.open_last_file); // 없던 필드도 ON 기본
         assert!(!l2.seamless);
         assert_eq!(l2.last_file, None);
+    }
+
+    #[test]
+    fn push_history_dedupes_moves_to_front_and_caps() {
+        let e = |p: &str, t: u64| HistoryEntry {
+            path: p.into(),
+            name: p.into(),
+            opened_at: t,
+        };
+        let paths = |h: &[HistoryEntry]| h.iter().map(|x| x.path.clone()).collect::<Vec<_>>();
+
+        let h = push_history(vec![], e("/a", 1), 3);
+        assert_eq!(paths(&h), ["/a"]);
+        let h = push_history(h, e("/b", 2), 3);
+        assert_eq!(paths(&h), ["/b", "/a"]); // 신규는 맨 앞
+        let h = push_history(h, e("/a", 3), 3);
+        assert_eq!(paths(&h), ["/a", "/b"]); // 재추가 → 중복 제거 후 맨 앞
+        assert_eq!(h[0].opened_at, 3); // 시각 갱신
+        assert_eq!(h.len(), 2);
+        let h = push_history(h, e("/c", 4), 3); // [c,a,b]
+        let h = push_history(h, e("/d", 5), 3); // cap 3 → 가장 오래된 b 제거
+        assert_eq!(paths(&h), ["/d", "/c", "/a"]);
+        assert_eq!(h.len(), 3);
+    }
+
+    #[test]
+    fn history_serde_and_migration() {
+        // 구버전 JSON(history 없음) → 빈 Vec
+        let p = tmp_file("no_history.json");
+        std::fs::write(
+            &p,
+            br#"{"lastFolder":null,"viewMode":"page","readingPositions":{}}"#,
+        )
+        .unwrap();
+        assert!(load(&p).history.is_empty());
+
+        // 라운드트립
+        let p2 = tmp_file("history.json");
+        let s = PersistedState {
+            history: vec![HistoryEntry {
+                path: "/a/x.cbz".into(),
+                name: "x.cbz".into(),
+                opened_at: 123,
+            }],
+            ..Default::default()
+        };
+        save(&p2, &s).unwrap();
+        assert_eq!(load(&p2).history, s.history);
     }
 
     #[test]

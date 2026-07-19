@@ -9,6 +9,12 @@ export interface ArchiveInfo {
 export type PageFit = "original" | "width" | "height" | "screen";
 export type ContinuousFit = "original" | "width";
 
+export interface HistoryEntry {
+  path: string;
+  name: string;
+  openedAt: number;
+}
+
 export interface PersistedState {
   lastFolder: string | null;
   viewMode: ViewMode;
@@ -21,6 +27,7 @@ export interface PersistedState {
   lastFile: string | null;
   openLastFile: boolean;
   seamless: boolean;
+  history: HistoryEntry[];
 }
 
 export type EntryKind = "folder" | "archive" | "image";
@@ -110,6 +117,21 @@ export function saveOpenLastFile(enabled: boolean): Promise<void> {
 /** "파일 이어보기" 옵션을 저장한다. */
 export function saveSeamless(enabled: boolean): Promise<void> {
   return invoke("save_seamless", { enabled });
+}
+
+/** 열람 히스토리에 아카이브를 기록한다(열기 성공 시 호출). */
+export function recordHistory(path: string): Promise<void> {
+  return invoke("record_history", { path });
+}
+
+/** 히스토리 항목 하나를 삭제한다. */
+export function deleteHistory(path: string): Promise<void> {
+  return invoke("delete_history", { path });
+}
+
+/** 히스토리를 전부 비운다. */
+export function resetHistory(): Promise<void> {
+  return invoke("reset_history");
 }
 
 /** 폴더 한 단계(하위 폴더 + 코믹 아카이브)를 읽는다. null이면 홈 디렉터리. */

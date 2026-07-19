@@ -165,6 +165,49 @@ fn save_seamless(enabled: bool, store: State<'_, PersistState>) {
     let _ = state::save(&file, &data);
 }
 
+/// 히스토리 최대 개수.
+const HISTORY_CAP: usize = 500;
+
+/// 열람 히스토리에 아카이브를 기록한다(열기 성공 시 프런트가 호출). 중복은 시각 갱신+맨 위.
+#[tauri::command]
+fn record_history(path: String, store: State<'_, PersistState>) {
+    let name = std::path::Path::new(&path)
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.clone());
+    let opened_at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let entry = state::HistoryEntry {
+        path,
+        name,
+        opened_at,
+    };
+    let mut s = store.lock().unwrap();
+    s.data.history = state::push_history(std::mem::take(&mut s.data.history), entry, HISTORY_CAP);
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
+/// 히스토리 항목 하나를 삭제한다.
+#[tauri::command]
+fn delete_history(path: String, store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.history.retain(|e| e.path != path);
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
+/// 히스토리를 전부 비운다.
+#[tauri::command]
+fn reset_history(store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.history.clear();
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
 /// 폴더 한 단계를 읽는다. path가 없으면 홈 디렉터리를 연다.
 #[tauri::command]
 fn read_dir(path: Option<String>, app: tauri::AppHandle) -> Result<fs::DirListing, String> {
@@ -307,6 +350,9 @@ pub fn run() {
             save_last_file,
             save_open_last_file,
             save_seamless,
+            record_history,
+            delete_history,
+            reset_history,
             read_dir,
             image_thumbnail,
             system_icon,

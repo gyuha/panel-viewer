@@ -103,6 +103,123 @@
   overflow-y: auto;
   padding: var(--s-xs);
 }
+/* 폴더/히스토리 뷰 전환 탭 */
+.panel-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+  padding: 0 var(--s-xs);
+  border-bottom: 1px solid var(--hairline);
+}
+.ptab {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.ptab:hover {
+  color: var(--ink);
+}
+.ptab.active {
+  color: var(--ink);
+  border-bottom-color: var(--primary);
+  font-weight: 500;
+}
+/* 히스토리 항목 */
+.hist-row {
+  display: flex;
+  align-items: center;
+  border-radius: var(--r-sm);
+}
+.hist-row:hover {
+  background: var(--surface-strong);
+}
+.hist-row.active {
+  background: var(--primary);
+}
+.hist-row.active .hist-name,
+.hist-row.active .hist-time {
+  color: var(--on-primary);
+}
+.hist-open {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.hist-name {
+  font-size: 13px;
+  color: var(--ink);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hist-time {
+  font-size: 11px;
+  color: var(--muted);
+}
+.hist-del {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.hist-del:hover {
+  color: var(--error);
+}
+/* 히스토리 하단 컨트롤(페이징 + 리셋) */
+.hist-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-xs);
+  padding: 0 var(--s-xs) var(--s-xs);
+  font-size: 12px;
+  color: var(--muted);
+}
+.hist-paging {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hist-paging button,
+.hist-reset,
+.hist-reset-confirm button {
+  border: 1px solid var(--hairline-strong);
+  background: var(--canvas-soft);
+  color: var(--ink);
+  border-radius: var(--r-sm);
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.hist-paging button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.hist-reset:hover {
+  color: var(--error);
+}
+.hist-reset-confirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 .panel-empty,
 .panel-error {
   padding: var(--s-base);
