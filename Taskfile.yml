@@ -48,6 +48,12 @@ tasks:
     cmds:
       - npm run tauri build -- --bundles app
 
+  release:
+    desc: "버전 올리고 .dmg 빌드해 GitHub 릴리스 업로드 — task release -- [patch|minor|major|X.Y.Z]"
+    deps: [_needs-node-modules]
+    cmds:
+      - bash scripts/release.sh {{.CLI_ARGS}}
+
   web:build:
     desc: "프런트엔드만 빌드 (tsc + vite → dist/)"
     deps: [_needs-node-modules]
