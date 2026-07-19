@@ -14,9 +14,16 @@ import {
   saveKeybindings,
   savePanelHidden,
   saveWindowSize,
+  savePageFit,
+  saveContinuousFit,
+  saveLastFile,
+  saveOpenLastFile,
+  saveSeamless,
   quitApp,
   type ArchiveInfo,
   type DirListing,
+  type PageFit,
+  type ContinuousFit,
 } from "./lib/api";
 import type { ViewMode } from "./lib/nav";
 import { DEFAULT_CUSTOM, type Action, type CustomKeys } from "./lib/keymap";
@@ -50,6 +57,10 @@ function App() {
   const [customKeys, setCustomKeys] = useState<CustomKeys>(DEFAULT_CUSTOM);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [panelHidden, setPanelHidden] = useState(false);
+  const [pageFit, setPageFit] = useState<PageFit>("screen");
+  const [continuousFit, setContinuousFit] = useState<ContinuousFit>("width");
+  const [openLastFile, setOpenLastFile] = useState(true);
+  const [seamless, setSeamless] = useState(false);
 
   const [fileToken, setFileToken] = useState("");
   // 현재 폴더 단일 소스: 패널 목록이자 이전/다음 파일 이동의 범위
@@ -72,48 +83,64 @@ function App() {
     }
   }, []);
 
-  const openPath = useCallback(async (path: string) => {
-    if (opening.current) return;
-    opening.current = true;
-    try {
-      const i = await openArchive(path);
-      // 현재 폴더를 열린 파일의 폴더로 동기화하고, 파일명(NFC) 매칭으로 정규 경로를 얻는다.
-      let canonical = path;
+  const openPath = useCallback(
+    async (path: string, opts?: { atLastPage?: boolean; silent?: boolean }) => {
+      if (opening.current) return;
+      opening.current = true;
       try {
-        const l = await readDir(dirname(path));
-        setListing(l);
-        setFolderError(null);
-        void saveLastFolder(l.current);
-        const archives = l.files.filter((f) => f.kind === "archive").map((f) => f.path);
-        const idx = indexInFolder(archives, path);
-        if (idx >= 0) canonical = archives[idx];
-      } catch {
-        /* 폴더를 못 읽어도 파일 자체는 연다 */
+        const i = await openArchive(path);
+        // 현재 폴더를 열린 파일의 폴더로 동기화하고, 파일명(NFC) 매칭으로 정규 경로를 얻는다.
+        let canonical = path;
+        try {
+          const l = await readDir(dirname(path));
+          setListing(l);
+          setFolderError(null);
+          void saveLastFolder(l.current);
+          const archives = l.files.filter((f) => f.kind === "archive").map((f) => f.path);
+          const idx = indexInFolder(archives, path);
+          if (idx >= 0) canonical = archives[idx];
+        } catch {
+          /* 폴더를 못 읽어도 파일 자체는 연다 */
+        }
+        openSeq.current += 1;
+        setFileToken(String(openSeq.current));
+        setOpenedPath(canonical);
+        setInfo(i);
+        if (opts?.atLastPage) {
+          setPage(i.pageCount - 1); // 이어보기로 이전 파일을 열 땐 마지막 페이지부터
+        } else {
+          const saved = readingPositions.current[canonical] ?? 0;
+          setPage(saved < i.pageCount ? saved : 0);
+        }
+        setError(null);
+        void saveLastFile(canonical); // 마지막으로 연 파일 기억
+      } catch (e) {
+        if (!opts?.silent) setError(String(e)); // 마지막 파일 자동 열기 실패는 조용히 스킵
+      } finally {
+        opening.current = false;
       }
-      openSeq.current += 1;
-      setFileToken(String(openSeq.current));
-      setOpenedPath(canonical);
-      setInfo(i);
-      const saved = readingPositions.current[canonical] ?? 0;
-      setPage(saved < i.pageCount ? saved : 0);
-      setError(null);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      opening.current = false;
-    }
-  }, []);
+    },
+    [],
+  );
 
-  // 시작 시 영속 상태 복원(보기 모드 · 읽던 위치 맵 · 마지막 폴더)
+  // 시작 시 영속 상태 복원(보기 모드 · 읽던 위치 맵 · 마지막 폴더 · 옵션) + 초기 파일 열기
   useEffect(() => {
-    void loadState().then((s) => {
+    void loadState().then(async (s) => {
       setMode(s.viewMode);
       readingPositions.current = s.readingPositions ?? {};
       // 저장된 커스텀 키를 기본값과 병합(없는 동작은 기본값 유지)
       setCustomKeys({ ...DEFAULT_CUSTOM, ...(s.keybindings ?? {}) });
       setPanelHidden(s.panelHidden ?? false);
+      setPageFit(s.pageFit ?? "screen");
+      setContinuousFit(s.continuousFit ?? "width");
+      setOpenLastFile(s.openLastFile ?? true);
+      setSeamless(s.seamless ?? false);
       setReady(true);
       void navigate(s.lastFolder); // 현재 폴더를 마지막 폴더(없으면 홈)로
+      // 초기 열기: 파일 연결/CLI 대기 파일 우선, 없으면 옵션 켜져 있을 때 마지막 파일(조용히)
+      const pending = await takePendingFile();
+      if (pending) void openPath(pending);
+      else if (s.openLastFile && s.lastFile) void openPath(s.lastFile, { silent: true });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -164,11 +191,8 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [settingsOpen, customKeys, togglePanel]);
 
-  // 파일 연결로 넘어온 파일 처리(시작 시 대기 파일 + 실행 중 open-archive 이벤트)
+  // 파일 연결로 실행 중 넘어오는 open-archive 이벤트 처리(시작 시 대기 파일은 위 복원 효과에서 소비)
   useEffect(() => {
-    void takePendingFile().then((p) => {
-      if (p) void openPath(p);
-    });
     const un = listen<string>("open-archive", (e) => {
       if (e.payload) void openPath(e.payload);
     });
@@ -202,6 +226,26 @@ function App() {
   const handleModeChange = useCallback((next: ViewMode) => {
     setMode(next);
     void saveViewMode(next);
+  }, []);
+
+  const handlePageFit = useCallback((fit: PageFit) => {
+    setPageFit(fit);
+    void savePageFit(fit);
+  }, []);
+
+  const handleContinuousFit = useCallback((fit: ContinuousFit) => {
+    setContinuousFit(fit);
+    void saveContinuousFit(fit);
+  }, []);
+
+  const handleOpenLastFile = useCallback((enabled: boolean) => {
+    setOpenLastFile(enabled);
+    void saveOpenLastFile(enabled);
+  }, []);
+
+  const handleSeamless = useCallback((enabled: boolean) => {
+    setSeamless(enabled);
+    void saveSeamless(enabled);
   }, []);
 
   // 창 전체 드래그 앤 드롭
@@ -275,6 +319,9 @@ function App() {
             page={page}
             mode={mode}
             token={fileToken}
+            pageFit={pageFit}
+            continuousFit={continuousFit}
+            seamless={seamless}
             customKeys={customKeys}
             shortcutsEnabled={!settingsOpen}
             panelHidden={panelHidden}
@@ -286,6 +333,11 @@ function App() {
             }}
             onNextFile={() => {
               if (hasNextFile) void openPath(folderArchives[currentIndex + 1]);
+            }}
+            onOpenAdjacent={(dir) => {
+              if (dir === 1 && hasNextFile) void openPath(folderArchives[currentIndex + 1]);
+              else if (dir === -1 && hasPrevFile)
+                void openPath(folderArchives[currentIndex - 1], { atLastPage: true });
             }}
             onPageChange={handlePageChange}
             onModeChange={handleModeChange}
@@ -324,6 +376,14 @@ function App() {
           customKeys={customKeys}
           onSet={setBinding}
           onReset={resetBindings}
+          pageFit={pageFit}
+          continuousFit={continuousFit}
+          onSetPageFit={handlePageFit}
+          onSetContinuousFit={handleContinuousFit}
+          openLastFile={openLastFile}
+          seamless={seamless}
+          onSetOpenLastFile={handleOpenLastFile}
+          onSetSeamless={handleSeamless}
           onClose={() => setSettingsOpen(false)}
         />
       )}

@@ -251,6 +251,95 @@
   font-size: 13px;
   margin: 0 0 var(--s-base);
 }
+/* 설정 탭 바 */
+.tab-bar {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: var(--s-base);
+}
+.tab-btn {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tab-btn:hover {
+  color: var(--ink);
+}
+.tab-btn.active {
+  color: var(--ink);
+  border-bottom-color: var(--primary);
+  font-weight: 500;
+}
+/* 설정 항목(라벨 + 컨트롤) */
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--s-sm) 0;
+}
+.setting-label {
+  font-size: 14px;
+  color: var(--ink);
+}
+/* 일반 탭 토글 목록 */
+.general-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-base);
+  padding: var(--s-sm) 0;
+}
+.toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.toggle-row input {
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+.toggle-desc {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  font-style: normal;
+  margin-top: 2px;
+}
+/* 세그먼트 선택 컨트롤 */
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  width: fit-content;
+}
+.seg-btn {
+  border: none;
+  background: var(--canvas-soft);
+  color: var(--ink);
+  font-size: 13px;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-right: 1px solid var(--hairline-strong);
+}
+.seg-btn:last-child {
+  border-right: none;
+}
+.seg-btn:hover {
+  background: var(--surface-strong);
+}
+.seg-btn.active {
+  background: var(--primary);
+  color: var(--on-primary);
+}
 .keymap-table {
   width: 100%;
   border-collapse: collapse;
@@ -470,6 +559,17 @@
   height: auto;
   display: block;
 }
+/* 연속 이미지 맞춤 — 기본(fit-width)은 위 규칙. 원본은 자연 크기 + 가로 스크롤 */
+.continuous.fit-original {
+  overflow-x: auto;
+}
+.continuous.fit-original .cont-page {
+  justify-content: flex-start;
+}
+.continuous.fit-original .cont-img {
+  width: auto;
+  max-width: none;
+}
 
 .viewer-stage {
   position: relative;
@@ -488,6 +588,43 @@
   height: auto;
   object-fit: contain;
   display: block;
+}
+/* 이미지 맞춤(한장) — 기본(fit-screen)은 위 기본 규칙 그대로. 나머지는 넘칠 수 있어 스크롤 허용 */
+.viewer-stage.fit-width,
+.viewer-stage.fit-height,
+.viewer-stage.fit-original {
+  overflow: auto;
+}
+.viewer-stage.fit-width {
+  align-items: flex-start;
+}
+.viewer-stage.fit-height {
+  justify-content: flex-start;
+}
+.viewer-stage.fit-original {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+.viewer-stage.fit-width .viewer-page {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: none;
+  object-fit: unset;
+}
+.viewer-stage.fit-height .viewer-page {
+  height: 100%;
+  width: auto;
+  max-height: 100%;
+  max-width: none;
+  object-fit: unset;
+}
+.viewer-stage.fit-original .viewer-page {
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  object-fit: unset;
 }
 
 /* 좌우 클릭 영역 (투명 오버레이) */

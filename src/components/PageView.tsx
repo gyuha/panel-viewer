@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
-import { pageUrl } from "../lib/api";
-import { nextPage, prevPage, wheelTurn } from "../lib/nav";
+import { pageUrl, type PageFit } from "../lib/api";
+import { seamlessTurn, wheelTurn } from "../lib/nav";
 import { resolve, type CustomKeys } from "../lib/keymap";
 
 /** 휠 페이지 전환 쿨다운(ms): 한 노치/제스처가 한 페이지가 되도록 억제. */
@@ -10,6 +10,11 @@ interface PageViewProps {
   pageCount: number;
   page: number;
   token: string;
+  fit: PageFit;
+  seamless: boolean;
+  hasPrevFile: boolean;
+  hasNextFile: boolean;
+  onOpenAdjacent: (dir: -1 | 1) => void;
   customKeys: CustomKeys;
   shortcutsEnabled: boolean;
   onPageChange: (page: number) => void;
@@ -20,18 +25,26 @@ export function PageView({
   pageCount,
   page,
   token,
+  fit,
+  seamless,
+  hasPrevFile,
+  hasNextFile,
+  onOpenAdjacent,
   customKeys,
   shortcutsEnabled,
   onPageChange,
 }: PageViewProps) {
-  const goNext = useCallback(
-    () => onPageChange(nextPage(page, pageCount)),
-    [page, pageCount, onPageChange],
-  );
-  const goPrev = useCallback(
-    () => onPageChange(prevPage(page, pageCount)),
-    [page, pageCount, onPageChange],
-  );
+  // 페이지 경계에서 이어보기가 켜져 있으면 인접 파일로, 아니면 클램프.
+  const goNext = useCallback(() => {
+    const r = seamlessTurn(page, pageCount, 1, seamless, hasPrevFile, hasNextFile);
+    if (r.kind === "page") onPageChange(r.page);
+    else if (r.kind === "file") onOpenAdjacent(1);
+  }, [page, pageCount, seamless, hasPrevFile, hasNextFile, onPageChange, onOpenAdjacent]);
+  const goPrev = useCallback(() => {
+    const r = seamlessTurn(page, pageCount, -1, seamless, hasPrevFile, hasNextFile);
+    if (r.kind === "page") onPageChange(r.page);
+    else if (r.kind === "file") onOpenAdjacent(-1);
+  }, [page, pageCount, seamless, hasPrevFile, hasNextFile, onPageChange, onOpenAdjacent]);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const lastWheelAt = useRef(0);
@@ -88,7 +101,7 @@ export function PageView({
   }, [page, pageCount, token]);
 
   return (
-    <div className="viewer-stage" ref={stageRef}>
+    <div className={`viewer-stage fit-${fit}`} ref={stageRef}>
       <img
         className="viewer-page"
         src={pageUrl(page, token)}

@@ -120,6 +120,51 @@ fn save_window_size(width: f64, height: f64, store: State<'_, PersistState>) {
     let _ = state::save(&file, &data);
 }
 
+/// 한장 모드 이미지 맞춤을 저장한다.
+#[tauri::command]
+fn save_page_fit(fit: state::PageFit, store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.page_fit = fit;
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
+/// 연속 모드 이미지 맞춤을 저장한다.
+#[tauri::command]
+fn save_continuous_fit(fit: state::ContinuousFit, store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.continuous_fit = fit;
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
+/// 마지막으로 연 아카이브 경로를 저장한다(파일 열기 성공 시 프런트가 호출).
+#[tauri::command]
+fn save_last_file(path: String, store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.last_file = Some(path);
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
+/// "마지막 파일 열기" 옵션을 저장한다.
+#[tauri::command]
+fn save_open_last_file(enabled: bool, store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.open_last_file = enabled;
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
+/// "파일 이어보기" 옵션을 저장한다.
+#[tauri::command]
+fn save_seamless(enabled: bool, store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.seamless = enabled;
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
 /// 폴더 한 단계를 읽는다. path가 없으면 홈 디렉터리를 연다.
 #[tauri::command]
 fn read_dir(path: Option<String>, app: tauri::AppHandle) -> Result<fs::DirListing, String> {
@@ -257,6 +302,11 @@ pub fn run() {
             save_keybindings,
             save_panel_hidden,
             save_window_size,
+            save_page_fit,
+            save_continuous_fit,
+            save_last_file,
+            save_open_last_file,
+            save_seamless,
             read_dir,
             image_thumbnail,
             system_icon,

@@ -22,7 +22,35 @@ pub struct WindowSize {
     pub height: f64,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+/// 한장 모드 이미지 맞춤. 기본값 = 화면에 맞추기(현재 동작).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum PageFit {
+    #[serde(rename = "original")]
+    Original,
+    #[serde(rename = "width")]
+    Width,
+    #[serde(rename = "height")]
+    Height,
+    #[default]
+    #[serde(rename = "screen")]
+    Screen,
+}
+
+/// 연속 모드 이미지 맞춤. 기본값 = 폭 맞추기(현재 동작).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum ContinuousFit {
+    #[serde(rename = "original")]
+    Original,
+    #[default]
+    #[serde(rename = "width")]
+    Width,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PersistedState {
     #[serde(default)]
@@ -42,6 +70,39 @@ pub struct PersistedState {
     /// 마지막 창 크기. 없으면(구버전/최초 실행) None → config 기본 크기 사용.
     #[serde(default)]
     pub window_size: Option<WindowSize>,
+    /// 한장 모드 이미지 맞춤. 없으면 기본값(화면에 맞추기).
+    #[serde(default)]
+    pub page_fit: PageFit,
+    /// 연속 모드 이미지 맞춤. 없으면 기본값(폭 맞추기).
+    #[serde(default)]
+    pub continuous_fit: ContinuousFit,
+    /// 마지막으로 연 아카이브 절대경로(마지막 파일 열기용).
+    #[serde(default)]
+    pub last_file: Option<String>,
+    /// 앱을 그냥 실행했을 때 마지막 파일을 자동으로 열지. 필드가 없으면(구버전) ON.
+    #[serde(default = "default_true")]
+    pub open_last_file: bool,
+    /// 파일 이어보기(페이지 경계에서 인접 파일 자동 열기).
+    #[serde(default)]
+    pub seamless: bool,
+}
+
+impl Default for PersistedState {
+    fn default() -> Self {
+        Self {
+            last_folder: None,
+            view_mode: ViewMode::default(),
+            reading_positions: HashMap::new(),
+            keybindings: HashMap::new(),
+            panel_hidden: false,
+            window_size: None,
+            page_fit: PageFit::default(),
+            continuous_fit: ContinuousFit::default(),
+            last_file: None,
+            open_last_file: true,
+            seamless: false,
+        }
+    }
 }
 
 /// 저장된 창 크기를 모니터 한계로 상한 제한한다(하한은 두지 않는다).
@@ -86,6 +147,11 @@ mod tests {
             keybindings: HashMap::new(),
             panel_hidden: true,
             window_size: None,
+            page_fit: PageFit::Screen,
+            continuous_fit: ContinuousFit::Width,
+            last_file: None,
+            open_last_file: true,
+            seamless: false,
         };
         s.reading_positions.insert("/a/b.cbz".into(), 37);
         s.reading_positions.insert("/a/c.cbr".into(), 4);
@@ -164,6 +230,80 @@ mod tests {
         )
         .unwrap();
         assert_eq!(load(&p2).window_size, None);
+    }
+
+    #[test]
+    fn image_fit_defaults_round_trip_and_migration() {
+        // 기본값: 한장=화면, 연속=폭 (현재 동작 유지)
+        let d = PersistedState::default();
+        assert_eq!(d.page_fit, PageFit::Screen);
+        assert_eq!(d.continuous_fit, ContinuousFit::Width);
+
+        // 라운드트립
+        let p = tmp_file("fit.json");
+        let s = PersistedState {
+            page_fit: PageFit::Height,
+            continuous_fit: ContinuousFit::Original,
+            ..Default::default()
+        };
+        save(&p, &s).unwrap();
+        let l = load(&p);
+        assert_eq!(l.page_fit, PageFit::Height);
+        assert_eq!(l.continuous_fit, ContinuousFit::Original);
+
+        // serde 값 이름
+        assert_eq!(serde_json::to_string(&PageFit::Width).unwrap(), "\"width\"");
+        assert_eq!(serde_json::to_string(&PageFit::Screen).unwrap(), "\"screen\"");
+        assert_eq!(
+            serde_json::to_string(&ContinuousFit::Original).unwrap(),
+            "\"original\""
+        );
+
+        // 구버전 JSON(필드 없음) → 기본값
+        let p2 = tmp_file("no_fit.json");
+        std::fs::write(
+            &p2,
+            br#"{"lastFolder":null,"viewMode":"page","readingPositions":{}}"#,
+        )
+        .unwrap();
+        let l2 = load(&p2);
+        assert_eq!(l2.page_fit, PageFit::Screen);
+        assert_eq!(l2.continuous_fit, ContinuousFit::Width);
+    }
+
+    #[test]
+    fn reading_options_defaults_and_migration() {
+        // 기본값: 마지막 파일 열기 ON, 이어보기 OFF, last_file 없음
+        let d = PersistedState::default();
+        assert!(d.open_last_file);
+        assert!(!d.seamless);
+        assert_eq!(d.last_file, None);
+
+        // 라운드트립
+        let p = tmp_file("reading.json");
+        let s = PersistedState {
+            last_file: Some("/a/b.cbz".into()),
+            open_last_file: false,
+            seamless: true,
+            ..Default::default()
+        };
+        save(&p, &s).unwrap();
+        let l = load(&p);
+        assert_eq!(l.last_file.as_deref(), Some("/a/b.cbz"));
+        assert!(!l.open_last_file);
+        assert!(l.seamless);
+
+        // 구버전 JSON(필드 없음): open_last_file은 true로, 나머지는 기본값으로 로드
+        let p2 = tmp_file("no_reading.json");
+        std::fs::write(
+            &p2,
+            br#"{"lastFolder":null,"viewMode":"page","readingPositions":{}}"#,
+        )
+        .unwrap();
+        let l2 = load(&p2);
+        assert!(l2.open_last_file); // 없던 필드도 ON 기본
+        assert!(!l2.seamless);
+        assert_eq!(l2.last_file, None);
     }
 
     #[test]

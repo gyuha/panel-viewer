@@ -6,6 +6,9 @@ export interface ArchiveInfo {
   pageCount: number;
 }
 
+export type PageFit = "original" | "width" | "height" | "screen";
+export type ContinuousFit = "original" | "width";
+
 export interface PersistedState {
   lastFolder: string | null;
   viewMode: ViewMode;
@@ -13,6 +16,11 @@ export interface PersistedState {
   keybindings: Record<string, string>;
   panelHidden: boolean;
   windowSize: { width: number; height: number } | null;
+  pageFit: PageFit;
+  continuousFit: ContinuousFit;
+  lastFile: string | null;
+  openLastFile: boolean;
+  seamless: boolean;
 }
 
 export type EntryKind = "folder" | "archive" | "image";
@@ -77,6 +85,31 @@ export function savePanelHidden(hidden: boolean): Promise<void> {
 /** 창 크기(논리 픽셀)를 저장한다. 복원은 백엔드 setup()이 담당. */
 export function saveWindowSize(width: number, height: number): Promise<void> {
   return invoke("save_window_size", { width, height });
+}
+
+/** 한장 모드 이미지 맞춤을 저장한다. */
+export function savePageFit(fit: PageFit): Promise<void> {
+  return invoke("save_page_fit", { fit });
+}
+
+/** 연속 모드 이미지 맞춤을 저장한다. */
+export function saveContinuousFit(fit: ContinuousFit): Promise<void> {
+  return invoke("save_continuous_fit", { fit });
+}
+
+/** 마지막으로 연 아카이브 경로를 저장한다. */
+export function saveLastFile(path: string): Promise<void> {
+  return invoke("save_last_file", { path });
+}
+
+/** "마지막 파일 열기" 옵션을 저장한다. */
+export function saveOpenLastFile(enabled: boolean): Promise<void> {
+  return invoke("save_open_last_file", { enabled });
+}
+
+/** "파일 이어보기" 옵션을 저장한다. */
+export function saveSeamless(enabled: boolean): Promise<void> {
+  return invoke("save_seamless", { enabled });
 }
 
 /** 폴더 한 단계(하위 폴더 + 코믹 아카이브)를 읽는다. null이면 홈 디렉터리. */

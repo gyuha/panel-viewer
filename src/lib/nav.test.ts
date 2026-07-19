@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clampPage, nextPage, prevPage, wheelTurn } from "./nav";
+import { clampPage, nextPage, prevPage, wheelTurn, seamlessTurn } from "./nav";
 
 describe("page navigation", () => {
   it("clamps within bounds", () => {
@@ -17,6 +17,31 @@ describe("page navigation", () => {
   it("goes to previous, stopping at the first page", () => {
     expect(prevPage(3, 5)).toBe(2);
     expect(prevPage(0, 5)).toBe(0);
+  });
+});
+
+describe("seamlessTurn (파일 이어보기 경계 판단)", () => {
+  it("경계 안에서는 일반 페이지 이동", () => {
+    expect(seamlessTurn(1, 5, 1, true, true, true)).toEqual({ kind: "page", page: 2 });
+    expect(seamlessTurn(3, 5, -1, true, true, true)).toEqual({ kind: "page", page: 2 });
+  });
+
+  it("마지막 페이지에서 다음 + 이어보기 + 다음 파일 있으면 파일 전환(dir 1)", () => {
+    expect(seamlessTurn(4, 5, 1, true, true, true)).toEqual({ kind: "file", dir: 1 });
+  });
+
+  it("첫 페이지에서 이전 + 이어보기 + 이전 파일 있으면 파일 전환(dir -1)", () => {
+    expect(seamlessTurn(0, 5, -1, true, true, true)).toEqual({ kind: "file", dir: -1 });
+  });
+
+  it("이어보기 꺼져 있으면 경계에서 아무 일 없음", () => {
+    expect(seamlessTurn(4, 5, 1, false, true, true)).toEqual({ kind: "none" });
+    expect(seamlessTurn(0, 5, -1, false, true, true)).toEqual({ kind: "none" });
+  });
+
+  it("이어보기지만 인접 파일 없으면 아무 일 없음", () => {
+    expect(seamlessTurn(4, 5, 1, true, true, false)).toEqual({ kind: "none" });
+    expect(seamlessTurn(0, 5, -1, true, false, true)).toEqual({ kind: "none" });
   });
 });
 

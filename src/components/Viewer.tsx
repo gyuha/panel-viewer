@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { ViewMode } from "../lib/nav";
+import type { PageFit, ContinuousFit } from "../lib/api";
 import { resolve, type CustomKeys } from "../lib/keymap";
 import { PageView } from "./PageView";
 import { ContinuousView } from "./ContinuousView";
@@ -10,6 +11,9 @@ interface ViewerProps {
   page: number;
   mode: ViewMode;
   token: string;
+  pageFit: PageFit;
+  continuousFit: ContinuousFit;
+  seamless: boolean;
   customKeys: CustomKeys;
   shortcutsEnabled: boolean;
   panelHidden: boolean;
@@ -18,6 +22,7 @@ interface ViewerProps {
   hasNextFile: boolean;
   onPrevFile: () => void;
   onNextFile: () => void;
+  onOpenAdjacent: (dir: -1 | 1) => void;
   onPageChange: (page: number) => void;
   onModeChange: (mode: ViewMode) => void;
   onClose: () => void;
@@ -35,6 +40,9 @@ export function Viewer({
   page,
   mode,
   token,
+  pageFit,
+  continuousFit,
+  seamless,
   customKeys,
   shortcutsEnabled,
   panelHidden,
@@ -43,6 +51,7 @@ export function Viewer({
   hasNextFile,
   onPrevFile,
   onNextFile,
+  onOpenAdjacent,
   onPageChange,
   onModeChange,
   onClose,
@@ -128,6 +137,11 @@ export function Viewer({
           pageCount={pageCount}
           page={page}
           token={token}
+          fit={continuousFit}
+          seamless={seamless}
+          hasPrevFile={hasPrevFile}
+          hasNextFile={hasNextFile}
+          onOpenAdjacent={onOpenAdjacent}
           onPageChange={onPageChange}
         />
       ) : (
@@ -135,6 +149,11 @@ export function Viewer({
           pageCount={pageCount}
           page={page}
           token={token}
+          fit={pageFit}
+          seamless={seamless}
+          hasPrevFile={hasPrevFile}
+          hasNextFile={hasNextFile}
+          onOpenAdjacent={onOpenAdjacent}
           customKeys={customKeys}
           shortcutsEnabled={shortcutsEnabled}
           onPageChange={onPageChange}

@@ -41,3 +41,29 @@ export function wheelTurn(
   }
   return { turn: true, dir: deltaY > 0 ? 1 : -1 };
 }
+
+/** 파일 이어보기 경계 판단 결과. */
+export type SeamlessResult =
+  | { kind: "page"; page: number } // 파일 안에서 일반 페이지 이동
+  | { kind: "file"; dir: -1 | 1 } // 인접 파일로 전환(1=다음, -1=이전)
+  | { kind: "none" }; // 경계 + 이어보기 불가 → 아무 일 없음
+
+/**
+ * dir(1=다음, -1=이전) 방향으로 넘길 때, 파일 안 이동인지 인접 파일 전환인지 판단한다.
+ * 경계가 아니면 page 이동, 경계이고 이어보기가 켜져 있고 인접 파일이 있으면 file 전환.
+ */
+export function seamlessTurn(
+  page: number,
+  pageCount: number,
+  dir: -1 | 1,
+  seamless: boolean,
+  hasPrev: boolean,
+  hasNext: boolean,
+): SeamlessResult {
+  const next = page + dir;
+  if (next >= 0 && next < pageCount) return { kind: "page", page: next };
+  if (!seamless) return { kind: "none" };
+  if (dir === 1 && hasNext) return { kind: "file", dir: 1 };
+  if (dir === -1 && hasPrev) return { kind: "file", dir: -1 };
+  return { kind: "none" };
+}
