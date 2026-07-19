@@ -36,27 +36,75 @@ export function ContinuousView({
   const initialPage = useRef(page); // 마운트 시점의 페이지로만 스크롤(이후 스크롤은 자유)
   const suppress = useRef(true); // 초기 프로그램 스크롤 중엔 관찰 무시
   const lastFileTurnAt = useRef(0); // 이어보기 파일 전환 쿨다운
+  // 휠 핸들러가 스크롤 중 재구독되지 않도록 최신 props를 ref로 읽는다.
+  const cb = useRef({ seamless, hasPrevFile, hasNextFile, onOpenAdjacent });
+  cb.current = { seamless, hasPrevFile, hasNextFile, onOpenAdjacent };
 
-  // 파일 이어보기: 맨 아래에서 휠 다운 → 다음 파일, 맨 위에서 휠 업 → 이전 파일(쿨다운).
+  // 마우스 휠을 가로채 부드럽게(이징) 스크롤 + 경계에서 파일 이어보기. (마운트 시 1회 구독)
   useEffect(() => {
     const el = containerRef.current;
-    if (!el || !seamless) return;
+    if (!el) return;
+    let target = el.scrollTop; // 목표 스크롤 위치
+    let animating = false;
+    let raf = 0;
+
+    const tick = () => {
+      const cur = el.scrollTop;
+      const d = target - cur;
+      if (Math.abs(d) < 0.5) {
+        el.scrollTop = target;
+        animating = false;
+        return;
+      }
+      el.scrollTop = cur + d * 0.2; // 남은 거리의 20%씩 접근 → 부드러운 감속
+      raf = requestAnimationFrame(tick);
+    };
+
     const onWheel = (e: WheelEvent) => {
-      const now = Date.now();
-      if (now - lastFileTurnAt.current < SEAMLESS_COOLDOWN_MS) return;
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
-      const atTop = el.scrollTop <= 4;
-      if (e.deltaY > 0 && atBottom && hasNextFile) {
-        lastFileTurnAt.current = now;
-        onOpenAdjacent(1);
-      } else if (e.deltaY < 0 && atTop && hasPrevFile) {
-        lastFileTurnAt.current = now;
-        onOpenAdjacent(-1);
+      const { seamless: sl, hasPrevFile: hp, hasNextFile: hn, onOpenAdjacent: open } = cb.current;
+      // 경계 + 이어보기: 다음/이전 파일로 전환(쿨다운)
+      if (sl) {
+        const now = Date.now();
+        if (now - lastFileTurnAt.current >= SEAMLESS_COOLDOWN_MS) {
+          const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+          const atTop = el.scrollTop <= 4;
+          if (e.deltaY > 0 && atBottom && hn) {
+            e.preventDefault();
+            lastFileTurnAt.current = now;
+            open(1);
+            return;
+          }
+          if (e.deltaY < 0 && atTop && hp) {
+            e.preventDefault();
+            lastFileTurnAt.current = now;
+            open(-1);
+            return;
+          }
+        }
+      }
+      // 부드러운 스크롤
+      e.preventDefault();
+      const px =
+        e.deltaMode === 1
+          ? e.deltaY * 16 // 줄 단위 → px
+          : e.deltaMode === 2
+            ? e.deltaY * el.clientHeight // 페이지 단위 → px
+            : e.deltaY;
+      const max = el.scrollHeight - el.clientHeight;
+      if (!animating) target = el.scrollTop; // 스크롤바/키 이동과 동기화
+      target = Math.max(0, Math.min(max, target + px));
+      if (!animating) {
+        animating = true;
+        raf = requestAnimationFrame(tick);
       }
     };
-    el.addEventListener("wheel", onWheel, { passive: true });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [seamless, hasPrevFile, hasNextFile, onOpenAdjacent]);
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
 
   // 마운트 시 현재 페이지로 스크롤 + 컨테이너에 포커스(클릭 없이도 키보드 스크롤이 바로 되도록)
   useEffect(() => {
