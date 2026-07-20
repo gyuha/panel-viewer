@@ -90,6 +90,55 @@ pub fn read_page(path: &Path, entry: &str) -> Result<Vec<u8>> {
     }
 }
 
+/// 아카이브를 **한 번만** 열어 순차로 훑으며, `wanted`에 있는 각 페이지의 바이트를 콜백에 넘긴다.
+/// `wanted[i]`는 페이지 index `i`의 항목명이다. 콜백이 `false`를 반환하면 즉시 중단한다(세션 무효화).
+///
+/// 페이지마다 재오픈하는 `read_page`와 달리 한 패스로 끝내므로, 특히 RAR(순차 포맷)에서
+/// 페이지당 O(N) 선형 스캔 → 전체 O(N²)이던 것을 O(N)으로 낮춘다. 프리페치 스레드가 쓴다.
+pub fn extract_all<F: FnMut(usize, Vec<u8>) -> bool>(
+    path: &Path,
+    wanted: &[String],
+    mut on_page: F,
+) -> Result<()> {
+    let mut idx_of: std::collections::HashMap<&str, usize> =
+        std::collections::HashMap::with_capacity(wanted.len());
+    for (i, name) in wanted.iter().enumerate() {
+        idx_of.insert(name.as_str(), i);
+    }
+    match detect_kind(path)? {
+        ArchiveKind::Zip => {
+            let mut zip = zip::ZipArchive::new(File::open(path)?)?;
+            for i in 0..zip.len() {
+                let mut f = zip.by_index(i)?;
+                let idx = idx_of.get(f.name()).copied();
+                if let Some(idx) = idx {
+                    let mut buf = Vec::with_capacity(f.size() as usize);
+                    f.read_to_end(&mut buf)?;
+                    if !on_page(idx, buf) {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        ArchiveKind::Rar => {
+            let mut archive = unrar::Archive::new(path).open_for_processing()?;
+            while let Some(header) = archive.read_header()? {
+                let name = header.entry().filename.to_string_lossy().replace('\\', "/");
+                if let Some(&idx) = idx_of.get(name.as_str()) {
+                    let (bytes, rest) = header.read()?;
+                    if !on_page(idx, bytes) {
+                        return Ok(());
+                    }
+                    archive = rest;
+                } else {
+                    archive = header.skip()?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn ext_lower(path: &Path) -> Option<String> {
     path.extension()
         .and_then(|e| e.to_str())
@@ -289,6 +338,67 @@ mod tests {
         let expected = std::fs::read(fixture("pages/01.png")).unwrap();
         assert_eq!(read_page(&cbr, "01.png").unwrap(), expected);
         assert!(read_page(&cbr, "10.png").unwrap().starts_with(b"\x89PNG"));
+    }
+
+    #[test]
+    fn extract_all_matches_read_page_for_every_page_zip() {
+        let dir = tmpdir();
+        let p = make_zip(
+            &dir,
+            "eq.cbz",
+            &[
+                ("1.png", b"ONE"),
+                ("2.png", b"TWO"),
+                ("10.png", b"TEN"),
+                ("note.txt", b"skip"),
+            ],
+        );
+        let pages = list_pages(&p).unwrap(); // ["1.png","2.png","10.png"]
+        let mut got: std::collections::HashMap<usize, Vec<u8>> = std::collections::HashMap::new();
+        extract_all(&p, &pages, |idx, bytes| {
+            got.insert(idx, bytes);
+            true
+        })
+        .unwrap();
+        assert_eq!(got.len(), pages.len());
+        for (i, name) in pages.iter().enumerate() {
+            // 순차 추출 바이트가 온디맨드 read_page와 정확히 일치해야 한다.
+            assert_eq!(got[&i], read_page(&p, name).unwrap());
+        }
+    }
+
+    #[test]
+    fn extract_all_matches_read_page_for_every_page_rar() {
+        let cbr = fixture("sample.cbr");
+        let pages = list_pages(&cbr).unwrap(); // ["01.png","02.png","10.png"]
+        let mut got: std::collections::HashMap<usize, Vec<u8>> = std::collections::HashMap::new();
+        extract_all(&cbr, &pages, |idx, bytes| {
+            got.insert(idx, bytes);
+            true
+        })
+        .unwrap();
+        assert_eq!(got.len(), pages.len());
+        for (i, name) in pages.iter().enumerate() {
+            assert_eq!(got[&i], read_page(&cbr, name).unwrap());
+        }
+    }
+
+    #[test]
+    fn extract_all_stops_when_callback_returns_false() {
+        let dir = tmpdir();
+        let p = make_zip(
+            &dir,
+            "stop.cbz",
+            &[("1.png", b"A"), ("2.png", b"B"), ("3.png", b"C")],
+        );
+        let pages = list_pages(&p).unwrap();
+        let mut count = 0;
+        extract_all(&p, &pages, |_idx, _b| {
+            count += 1;
+            false // 첫 페이지에서 중단 신호
+        })
+        .unwrap();
+        assert_eq!(count, 1);
     }
 
     #[test]

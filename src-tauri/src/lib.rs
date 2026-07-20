@@ -1,12 +1,18 @@
 mod archive;
 mod fs;
+mod page_cache;
 mod state;
 mod thumbnail;
 
+use page_cache::PageCache;
 use state::{PersistedState, ViewMode};
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager, State};
+
+/// 현재 아카이브의 페이지 바이트 캐시(백그라운드 프리페치가 채우고 프로토콜 핸들러가 읽음).
+/// 백그라운드 스레드로 옮기기 위해 Arc로 공유한다.
+type PageCacheState = Arc<Mutex<PageCache>>;
 
 /// OS 파일 연결(더블클릭)로 넘어온, 아직 프런트가 가져가지 않은 파일 경로.
 type PendingFile = Mutex<Option<String>>;
@@ -37,8 +43,13 @@ struct ArchiveInfo {
 }
 
 /// 아카이브를 열어 페이지 목록을 세션에 저장하고 정보를 반환한다.
+/// 이어서 백그라운드 스레드로 전체 페이지를 순차 추출해 캐시에 미리 채운다(ADR 260721-003136).
 #[tauri::command]
-fn open_archive(path: String, state: State<'_, ArchiveState>) -> archive::Result<ArchiveInfo> {
+fn open_archive(
+    path: String,
+    state: State<'_, ArchiveState>,
+    cache: State<'_, PageCacheState>,
+) -> archive::Result<ArchiveInfo> {
     let p = PathBuf::from(&path);
     let pages = archive::list_pages(&p)?;
     if pages.is_empty() {
@@ -51,9 +62,25 @@ fn open_archive(path: String, state: State<'_, ArchiveState>) -> archive::Result
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
     let page_count = pages.len();
-    let mut s = state.lock().unwrap();
-    s.path = Some(p);
-    s.pages = pages;
+
+    // 파일 전환 무효화: 세션 갱신 **전에** 캐시를 먼저 비워 세대를 올린다. 그래야 전환 순간
+    // 옛 파일의 캐시 바이트가 새 세션 컨텍스트로 잘못 서빙되는 창이 없다(그 틈의 요청은 온디맨드 폴백).
+    let generation = cache.lock().unwrap().reset();
+    {
+        let mut s = state.lock().unwrap();
+        s.path = Some(p.clone());
+        s.pages = pages.clone();
+    }
+
+    // 백그라운드로 전체 순차 추출을 시작한다(ADR 260721-003136).
+    let cache = cache.inner().clone();
+    std::thread::spawn(move || {
+        // insert_if_current가 낡은 세대에서 false를 돌려주면 extract_all이 즉시 중단한다.
+        let _ = archive::extract_all(&p, &pages, |idx, bytes| {
+            cache.lock().unwrap().insert_if_current(generation, idx, bytes)
+        });
+    });
+
     Ok(ArchiveInfo { name, page_count })
 }
 
@@ -278,6 +305,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(ArchiveState::default())
         .manage(PendingFile::default())
+        .manage(PageCacheState::default())
         .setup(|app| {
             let file = app.path().app_data_dir()?.join("state.json");
             let data = state::load(&file);
@@ -327,14 +355,22 @@ pub fn run() {
             };
             drop(guard);
 
-            match archive::read_page(&path, &entry) {
-                Ok(bytes) => Response::builder()
-                    .header("Content-Type", mime_for(&entry))
-                    .header("Cache-Control", "no-cache")
-                    .body(bytes)
-                    .unwrap(),
-                Err(_) => not_found(),
-            }
+            // 캐시 우선: 백그라운드 프리페치가 이미 채웠으면 RAM에서 즉시 서빙.
+            // 아직이면(초기 몇 페이지 등) 온디맨드로 한 번 추출해 폴백한다.
+            let cache = ctx.app_handle().state::<PageCacheState>();
+            let cached = cache.lock().unwrap().get(idx);
+            let bytes = match cached {
+                Some(b) => (*b).clone(),
+                None => match archive::read_page(&path, &entry) {
+                    Ok(b) => b,
+                    Err(_) => return not_found(),
+                },
+            };
+            Response::builder()
+                .header("Content-Type", mime_for(&entry))
+                .header("Cache-Control", "no-cache")
+                .body(bytes)
+                .unwrap()
         })
         .invoke_handler(tauri::generate_handler![
             open_archive,
