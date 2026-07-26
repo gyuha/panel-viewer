@@ -6,12 +6,14 @@ import {
   type DirListing,
   type HistoryEntry,
 } from "../lib/api";
+import { withKey } from "../lib/keymap";
 
 interface FilePanelProps {
   listing: DirListing | null;
   error: string | null;
   openedPath: string | null;
   history: HistoryEntry[];
+  togglePanelKey: string;
   onNavigate: (path: string) => void;
   onOpenFile: (path: string) => void;
   onDeleteHistory: (path: string) => void;
@@ -36,6 +38,7 @@ export function FilePanel({
   error,
   openedPath,
   history,
+  togglePanelKey,
   onNavigate,
   onOpenFile,
   onDeleteHistory,
@@ -60,7 +63,7 @@ export function FilePanel({
         <button
           className="panel-toggle-btn"
           onClick={onTogglePanel}
-          title="파일 목록 숨기기 (/)"
+          title={withKey("파일 목록 숨기기", togglePanelKey)}
           aria-label="파일 목록 숨기기"
         >
           ☰

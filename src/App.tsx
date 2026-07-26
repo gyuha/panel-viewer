@@ -30,7 +30,7 @@ import {
   type HistoryEntry,
 } from "./lib/api";
 import type { ViewMode } from "./lib/nav";
-import { DEFAULT_CUSTOM, eventKey, type Action, type CustomKeys } from "./lib/keymap";
+import { DEFAULT_CUSTOM, eventKey, withKey, type Action, type CustomKeys } from "./lib/keymap";
 import { basename, indexInFolder } from "./lib/folder";
 import { Viewer } from "./components/Viewer";
 import { FilePanel } from "./components/FilePanel";
@@ -332,6 +332,7 @@ function App() {
           error={folderError}
           openedPath={openedPath}
           history={history}
+          togglePanelKey={customKeys.togglePanel}
           onNavigate={navigate}
           onOpenFile={openPath}
           onDeleteHistory={handleDeleteHistory}
@@ -381,7 +382,7 @@ function App() {
               <button
                 className="panel-show-btn"
                 onClick={togglePanel}
-                title="파일 목록 (/)"
+                title={withKey("파일 목록", customKeys.togglePanel)}
                 aria-label="파일 목록 보이기"
               >
                 ☰

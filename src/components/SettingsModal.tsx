@@ -6,6 +6,7 @@ import {
   eventKey,
   findConflict,
   isAssignableKey,
+  keyLabel,
   type Action,
   type CustomKeys,
 } from "../lib/keymap";
@@ -73,20 +74,6 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "continuous", label: "연속" },
   { key: "shortcuts", label: "단축키" },
 ];
-
-/** 눌린 키를 사람이 읽는 라벨로. */
-function keyLabel(k: string): string {
-  const map: Record<string, string> = {
-    " ": "Space",
-    ArrowRight: "→",
-    ArrowLeft: "←",
-    ArrowUp: "↑",
-    ArrowDown: "↓",
-    PageUp: "PageUp",
-    PageDown: "PageDown",
-  };
-  return map[k] ?? k;
-}
 
 /** 설정 다이얼로그. 일반 · 한장 · 연속 · 단축키 탭으로 구성. */
 export function SettingsModal({

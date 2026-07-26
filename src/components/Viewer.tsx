@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { ViewMode } from "../lib/nav";
 import type { PageFit, ContinuousFit } from "../lib/api";
-import { resolve, eventKey, type CustomKeys } from "../lib/keymap";
+import { resolve, eventKey, withKey, type Action, type CustomKeys } from "../lib/keymap";
 import { PageView } from "./PageView";
 import { ContinuousView } from "./ContinuousView";
 
@@ -28,9 +28,9 @@ interface ViewerProps {
   onClose: () => void;
 }
 
-const MODES: { key: ViewMode; label: string; title: string }[] = [
-  { key: "page", label: "한장", title: "한 장씩 보기" },
-  { key: "continuous", label: "연속", title: "연속 스크롤 보기" },
+const MODES: { key: ViewMode; label: string; title: string; action: Action }[] = [
+  { key: "page", label: "한장", title: "한 장씩 보기", action: "modePage" },
+  { key: "continuous", label: "연속", title: "연속 스크롤 보기", action: "modeContinuous" },
 ];
 
 /** 보기 모드에 따라 페이지/연속 뷰를 전환하는 컨테이너. 현재 페이지는 전환 시 유지된다. */
@@ -56,7 +56,7 @@ export function Viewer({
   onModeChange,
   onClose,
 }: ViewerProps) {
-  // 모드 무관 단축키: 닫기(Esc) + 파일 이동(한장·연속 두 모드). 설정 모달 열림 중엔 미발동.
+  // 모드 무관 단축키: 닫기(Esc) + 파일 이동 + 보기 모드 전환(한장·연속 두 모드). 설정 모달 열림 중엔 미발동.
   // (앱 종료 x는 App의 전역 핸들러가 담당)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -72,11 +72,17 @@ export function Viewer({
       } else if (action === "prevFile") {
         e.preventDefault();
         onPrevFile();
+      } else if (action === "modePage") {
+        e.preventDefault();
+        onModeChange("page");
+      } else if (action === "modeContinuous") {
+        e.preventDefault();
+        onModeChange("continuous");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [shortcutsEnabled, customKeys, mode, onClose, onNextFile, onPrevFile]);
+  }, [shortcutsEnabled, customKeys, mode, onClose, onNextFile, onPrevFile, onModeChange]);
 
   return (
     <div className="viewer no-select">
@@ -85,7 +91,7 @@ export function Viewer({
           <button
             className="panel-toggle-btn"
             onClick={onTogglePanel}
-            title="파일 목록 보이기 (/)"
+            title={withKey("파일 목록 보이기", customKeys.togglePanel)}
             aria-label="파일 목록 보이기"
           >
             ☰
@@ -118,7 +124,7 @@ export function Viewer({
               key={m.key}
               className={`mode-btn ${mode === m.key ? "active" : ""}`}
               onClick={() => onModeChange(m.key)}
-              title={m.title}
+              title={withKey(m.title, customKeys[m.action])}
             >
               {m.label}
             </button>

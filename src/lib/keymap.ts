@@ -8,6 +8,8 @@ export type Action =
   | "lastPage"
   | "nextFile"
   | "prevFile"
+  | "modePage"
+  | "modeContinuous"
   | "togglePanel"
   | "quitApp";
 
@@ -18,6 +20,8 @@ export const ACTIONS: Action[] = [
   "lastPage",
   "nextFile",
   "prevFile",
+  "modePage",
+  "modeContinuous",
   "togglePanel",
   "quitApp",
 ];
@@ -29,6 +33,8 @@ export const ACTION_LABELS: Record<Action, string> = {
   lastPage: "마지막 페이지",
   nextFile: "다음 파일",
   prevFile: "이전 파일",
+  modePage: "한장 보기",
+  modeContinuous: "연속 보기",
   togglePanel: "파일 패널 토글",
   quitApp: "앱 종료",
 };
@@ -41,6 +47,8 @@ export const STANDARD_KEYS: Record<Action, string[]> = {
   lastPage: ["End"],
   nextFile: [],
   prevFile: [],
+  modePage: [],
+  modeContinuous: [],
   togglePanel: [],
   quitApp: [],
 };
@@ -55,16 +63,21 @@ export const DEFAULT_CUSTOM: CustomKeys = {
   lastPage: "",
   nextFile: ".",
   prevFile: ",",
+  modePage: "1",
+  modeContinuous: "2",
   togglePanel: "/",
   quitApp: "x",
 };
 
 const PAGE_ACTIONS: Action[] = ["nextPage", "prevPage", "firstPage", "lastPage"];
 const FILE_ACTIONS: Action[] = ["nextFile", "prevFile"];
+const MODE_ACTIONS: Action[] = ["modePage", "modeContinuous"];
 
-// 페이지 동작은 한장 모드에서만, 파일 동작은 두 모드 모두 유효.
+// 페이지 동작은 한장 모드에서만, 파일 이동과 보기 모드 전환은 두 모드 모두 유효.
 function actionsFor(mode: ViewMode): Action[] {
-  return mode === "continuous" ? FILE_ACTIONS : [...PAGE_ACTIONS, ...FILE_ACTIONS];
+  return mode === "continuous"
+    ? [...FILE_ACTIONS, ...MODE_ACTIONS]
+    : [...PAGE_ACTIONS, ...FILE_ACTIONS, ...MODE_ACTIONS];
 }
 
 /**
@@ -79,6 +92,25 @@ export function eventKey(e: { key: string; code: string }): string {
     if (c >= 65 && c <= 90) return e.code[3].toLowerCase();
   }
   return e.key;
+}
+
+/** 키를 사람이 읽는 라벨로(설정 표·툴팁 공용). */
+export function keyLabel(k: string): string {
+  const map: Record<string, string> = {
+    " ": "Space",
+    ArrowRight: "→",
+    ArrowLeft: "←",
+    ArrowUp: "↑",
+    ArrowDown: "↓",
+    PageUp: "PageUp",
+    PageDown: "PageDown",
+  };
+  return map[k] ?? k;
+}
+
+/** 버튼 툴팁에 현재 지정된 커스텀 키를 붙인다(지정 안 됐으면 접미사 없음). */
+export function withKey(title: string, key: string): string {
+  return key ? `${title} (${keyLabel(key)})` : title;
 }
 
 /** 눌린 키를 동작으로 해석한다(표준 키 + 커스텀 키, 모드별 유효 동작만). 없으면 null. */

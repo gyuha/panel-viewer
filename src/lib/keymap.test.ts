@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   ACTIONS,
+  ACTION_LABELS,
+  STANDARD_KEYS,
   DEFAULT_CUSTOM,
   resolve,
   eventKey,
@@ -101,6 +103,43 @@ describe("앱 종료 동작", () => {
 
   it("'x'는 예약되어 다른 동작이 못 뺏는다(충돌 감지)", () => {
     expect(findConflict("nextFile", "x", DEFAULT_CUSTOM)).toBe("quitApp");
+  });
+});
+
+describe("보기 모드 전환 동작", () => {
+  it("modePage·modeContinuous가 동작 목록에 있고 기본 커스텀 키는 '1'/'2'", () => {
+    expect(ACTIONS).toContain("modePage");
+    expect(ACTIONS).toContain("modeContinuous");
+    expect(DEFAULT_CUSTOM.modePage).toBe("1");
+    expect(DEFAULT_CUSTOM.modeContinuous).toBe("2");
+  });
+
+  it("표준 키는 없다(커스텀 키로만 동작, 재지정 가능)", () => {
+    expect(STANDARD_KEYS.modePage).toEqual([]);
+    expect(STANDARD_KEYS.modeContinuous).toEqual([]);
+  });
+
+  it("설정 표에 쓰는 라벨", () => {
+    expect(ACTION_LABELS.modePage).toBe("한장 보기");
+    expect(ACTION_LABELS.modeContinuous).toBe("연속 보기");
+  });
+
+  it("두 보기 모드 모두에서 해석된다", () => {
+    expect(resolve("1", DEFAULT_CUSTOM, "page")).toBe("modePage");
+    expect(resolve("1", DEFAULT_CUSTOM, "continuous")).toBe("modePage");
+    expect(resolve("2", DEFAULT_CUSTOM, "page")).toBe("modeContinuous");
+    expect(resolve("2", DEFAULT_CUSTOM, "continuous")).toBe("modeContinuous");
+  });
+
+  it("재지정한 키로 해석되고 기본 키는 죽는다", () => {
+    const custom: CustomKeys = { ...DEFAULT_CUSTOM, modePage: "q" };
+    expect(resolve("q", custom, "continuous")).toBe("modePage");
+    expect(resolve("1", custom, "continuous")).toBeNull();
+  });
+
+  it("'1'/'2'는 예약되어 다른 동작이 못 뺏는다(충돌 감지)", () => {
+    expect(findConflict("nextFile", "1", DEFAULT_CUSTOM)).toBe("modePage");
+    expect(findConflict("nextFile", "2", DEFAULT_CUSTOM)).toBe("modeContinuous");
   });
 });
 
