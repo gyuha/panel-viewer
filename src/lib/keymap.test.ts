@@ -8,6 +8,7 @@ import {
   eventKey,
   findConflict,
   isAssignableKey,
+  mouseAction,
   type CustomKeys,
 } from "./keymap";
 
@@ -140,6 +141,23 @@ describe("보기 모드 전환 동작", () => {
   it("'1'/'2'는 예약되어 다른 동작이 못 뺏는다(충돌 감지)", () => {
     expect(findConflict("nextFile", "1", DEFAULT_CUSTOM)).toBe("modePage");
     expect(findConflict("nextFile", "2", DEFAULT_CUSTOM)).toBe("modeContinuous");
+  });
+});
+
+describe("마우스 버튼 동작", () => {
+  it("뒤로(3)·앞으로(4) 버튼이 이전/다음 파일로 매핑된다", () => {
+    expect(mouseAction(3)).toBe("prevFile");
+    expect(mouseAction(4)).toBe("nextFile");
+  });
+
+  it("왼쪽·가운데·오른쪽 클릭은 아무 동작도 아니다", () => {
+    expect(mouseAction(0)).toBeNull();
+    expect(mouseAction(1)).toBeNull();
+    expect(mouseAction(2)).toBeNull();
+  });
+
+  it("정의되지 않은 버튼 번호는 null", () => {
+    expect(mouseAction(5)).toBeNull();
   });
 });
 

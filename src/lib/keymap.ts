@@ -108,6 +108,16 @@ export function keyLabel(k: string): string {
   return map[k] ?? k;
 }
 
+/**
+ * 마우스 버튼 번호(MouseEvent.button) → 동작. 재지정 불가한 고정 매핑.
+ * 3=뒤로(X1) · 4=앞으로(X2)는 실측으로 확인된 값이다(WKWebView에 mousedown으로 도달).
+ */
+export function mouseAction(button: number): Action | null {
+  if (button === 3) return "prevFile";
+  if (button === 4) return "nextFile";
+  return null;
+}
+
 /** 버튼 툴팁에 현재 지정된 커스텀 키를 붙인다(지정 안 됐으면 접미사 없음). */
 export function withKey(title: string, key: string): string {
   return key ? `${title} (${keyLabel(key)})` : title;

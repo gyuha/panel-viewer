@@ -261,7 +261,8 @@ export function SettingsModal({
             {message && <p className="modal-error">{message}</p>}
 
             <p className="modal-hint fixed-keys">
-              고정 단축키: <kbd>⌘ ,</kbd> 메뉴 열기 · <kbd>Esc</kbd> 닫기
+              고정 단축키: <kbd>⌘ ,</kbd> 메뉴 열기 · <kbd>Esc</kbd> 닫기 ·{" "}
+              <kbd>마우스 뒤로/앞으로</kbd> 이전/다음 파일
             </p>
 
             <footer className="modal-foot">

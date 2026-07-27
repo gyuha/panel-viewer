@@ -1,7 +1,14 @@
 import { useEffect } from "react";
 import type { ViewMode } from "../lib/nav";
 import type { PageFit, ContinuousFit } from "../lib/api";
-import { resolve, eventKey, withKey, type Action, type CustomKeys } from "../lib/keymap";
+import {
+  resolve,
+  eventKey,
+  withKey,
+  mouseAction,
+  type Action,
+  type CustomKeys,
+} from "../lib/keymap";
 import { PageView } from "./PageView";
 import { ContinuousView } from "./ContinuousView";
 
@@ -83,6 +90,24 @@ export function Viewer({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [shortcutsEnabled, customKeys, mode, onClose, onNextFile, onPrevFile, onModeChange]);
+
+  // 마우스 뒤로/앞으로 버튼 → 이전/다음 파일(고정 매핑, 재지정 불가). 설정 모달 열림 중엔 미발동.
+  // preventDefault는 웹뷰가 스스로 히스토리를 되감는 것에 대한 보험(실측에선 popstate가 없었다).
+  useEffect(() => {
+    const onMouse = (e: MouseEvent) => {
+      if (!shortcutsEnabled) return;
+      const action = mouseAction(e.button);
+      if (action === "prevFile") {
+        e.preventDefault();
+        onPrevFile();
+      } else if (action === "nextFile") {
+        e.preventDefault();
+        onNextFile();
+      }
+    };
+    window.addEventListener("mousedown", onMouse);
+    return () => window.removeEventListener("mousedown", onMouse);
+  }, [shortcutsEnabled, onPrevFile, onNextFile]);
 
   return (
     <div className="viewer no-select">
