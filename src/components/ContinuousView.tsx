@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, type Ref } from "react";
 import { pageUrl, type ContinuousFit } from "../lib/api";
+import { scrollTopForPage } from "../lib/nav";
 
 interface ContinuousViewProps {
   pageCount: number;
@@ -13,6 +14,11 @@ interface ContinuousViewProps {
   onPageChange: (page: number) => void;
 }
 
+/** 밖에서 특정 페이지로 스크롤시키기 위한 명령 통로(페이지 탐색 슬라이더가 쓴다). */
+export interface ContinuousHandle {
+  scrollToPage: (index: number) => void;
+}
+
 /** 파일 이어보기 쿨다운(ms): 관성 스크롤이 연속 발동하지 않게. */
 const SEAMLESS_COOLDOWN_MS = 500;
 
@@ -20,17 +26,20 @@ const SEAMLESS_COOLDOWN_MS = 500;
  * 연속 스크롤 모드. 세로로 페이지를 쌓아 폭 맞춤으로 보여준다.
  * 오프스크린 이미지는 네이티브 lazy 로딩으로 지연 로드해 대용량에서도 메모리 폭증을 막는다.
  */
-export function ContinuousView({
-  pageCount,
-  page,
-  token,
-  fit,
-  seamless,
-  hasPrevFile,
-  hasNextFile,
-  onOpenAdjacent,
-  onPageChange,
-}: ContinuousViewProps) {
+function ContinuousViewImpl(
+  {
+    pageCount,
+    page,
+    token,
+    fit,
+    seamless,
+    hasPrevFile,
+    hasNextFile,
+    onOpenAdjacent,
+    onPageChange,
+  }: ContinuousViewProps,
+  ref: Ref<ContinuousHandle>,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const initialPage = useRef(page); // 마운트 시점의 페이지로만 스크롤(이후 스크롤은 자유)
@@ -122,6 +131,22 @@ export function ContinuousView({
     };
   }, []);
 
+  // 밖(페이지 탐색 슬라이더)에서 임의 페이지로 스크롤시키는 통로.
+  // initialPage는 마운트 시점 값에 고정이라 page prop 변경만으로는 스크롤되지 않는다.
+  // offsetTop을 쓰지 않는 이유는 scrollTopForPage의 주석 참고.
+  useImperativeHandle(ref, () => ({
+    scrollToPage: (index: number) => {
+      const root = containerRef.current;
+      const el = pageRefs.current[index];
+      if (!root || !el) return;
+      root.scrollTop = scrollTopForPage(
+        root.scrollTop,
+        root.getBoundingClientRect().top,
+        el.getBoundingClientRect().top,
+      );
+    },
+  }), []);
+
   // 마운트 시 현재 페이지로 스크롤 + 컨테이너에 포커스(클릭 없이도 키보드 스크롤이 바로 되도록)
   useEffect(() => {
     const el = pageRefs.current[initialPage.current];
@@ -205,3 +230,5 @@ export function ContinuousView({
     </div>
   );
 }
+
+export const ContinuousView = forwardRef(ContinuousViewImpl);

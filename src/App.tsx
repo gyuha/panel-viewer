@@ -60,6 +60,7 @@ function App() {
   const [dragOver, setDragOver] = useState(false);
   const [customKeys, setCustomKeys] = useState<CustomKeys>(DEFAULT_CUSTOM);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [seekOpen, setSeekOpen] = useState(false);
   const [panelHidden, setPanelHidden] = useState(false);
   const [pageFit, setPageFit] = useState<PageFit>("screen");
   const [continuousFit, setContinuousFit] = useState<ContinuousFit>("width");
@@ -180,10 +181,11 @@ function App() {
   }, [panelHidden]);
 
   // 전역 단축키: Cmd+,(메뉴 열기=설정, 고정) · 앱 종료 · 패널 토글(둘 다 재지정 가능).
-  // 파일 안 열려 있어도 동작. 설정 모달 열림 중엔 미발동.
+  // 파일 안 열려 있어도 동작. 설정 모달·페이지 탐색 바 열림 중엔 미발동
+  // (탐색 바에서 슬라이더를 조작하는 중에 x가 앱을 종료시키면 안 된다).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (settingsOpen) return;
+      if (settingsOpen || seekOpen) return;
       // 메뉴 열기: macOS 표준 Cmd+, (고정, 재지정 불가)
       if (e.metaKey && e.key === ",") {
         e.preventDefault();
@@ -205,7 +207,7 @@ function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [settingsOpen, customKeys, togglePanel]);
+  }, [settingsOpen, seekOpen, customKeys, togglePanel]);
 
   // 파일 연결로 실행 중 넘어오는 open-archive 이벤트 처리(시작 시 대기 파일은 위 복원 효과에서 소비)
   useEffect(() => {
@@ -354,6 +356,8 @@ function App() {
             seamless={seamless}
             customKeys={customKeys}
             shortcutsEnabled={!settingsOpen}
+            seekOpen={seekOpen}
+            onSeekOpenChange={setSeekOpen}
             panelHidden={panelHidden}
             onTogglePanel={togglePanel}
             hasPrevFile={hasPrevFile}
@@ -374,6 +378,7 @@ function App() {
             onClose={() => {
               setInfo(null);
               setOpenedPath(null);
+              setSeekOpen(false);
             }}
           />
         ) : (

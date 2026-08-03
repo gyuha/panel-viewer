@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# forge 휘발성 상태 (시각 도우미 시안·서버 로그, 그릴링 진행 마커)
+.forge/visual/
+.forge/ask.md

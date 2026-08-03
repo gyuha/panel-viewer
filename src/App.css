@@ -570,10 +570,14 @@
   display: flex;
   flex-direction: column;
   background: var(--canvas);
+  position: relative; /* 페이지 탐색 바를 이 영역 기준으로 띄운다 */
 }
 .viewer-bar {
   height: 44px;
   flex: 0 0 auto;
+  /* 탐색 바의 backdrop(inset:0) 위에 올려 카운터 버튼이 계속 눌리게 한다 */
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: var(--s-sm);
@@ -593,6 +597,57 @@
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--muted);
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.viewer-count:hover {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+.viewer-count.active {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+
+/* ---- 페이지 탐색 바 ---- */
+/* 딤 없는 투명 backdrop: 뒤 화면을 가리지 않으면서 클릭·휠은 막고, 클릭하면 닫힌다.
+   바는 하단에 붙인다 — 만화 컷은 화면 중앙에 몰려 있어 가운데에 두면 읽는 데 방해된다
+   (UAT에서 확인). backdrop 자체는 영역 전체를 덮어야 클릭·휠 차단이 유지된다. */
+.seek-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--s-lg);
+}
+.seek-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm);
+  width: min(420px, 62%);
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-lg);
+  box-shadow: 0 6px 22px rgba(38, 37, 30, 0.18);
+}
+.seek-range {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+.seek-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+  white-space: nowrap;
 }
 
 /* 이전/다음 파일 이동 */

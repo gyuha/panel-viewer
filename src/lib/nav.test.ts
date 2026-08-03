@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { clampPage, nextPage, prevPage, wheelTurn, seamlessTurn } from "./nav";
+import {
+  clampPage,
+  nextPage,
+  prevPage,
+  wheelTurn,
+  seamlessTurn,
+  scrollTopForPage,
+} from "./nav";
 
 describe("page navigation", () => {
   it("clamps within bounds", () => {
@@ -42,6 +49,27 @@ describe("seamlessTurn (파일 이어보기 경계 판단)", () => {
   it("이어보기지만 인접 파일 없으면 아무 일 없음", () => {
     expect(seamlessTurn(4, 5, 1, true, true, false)).toEqual({ kind: "none" });
     expect(seamlessTurn(0, 5, -1, true, false, true)).toEqual({ kind: "none" });
+  });
+});
+
+describe("scrollTopForPage (연속 모드 스크롤 목표)", () => {
+  it("아래에 있는 페이지로 내려간다", () => {
+    // 컨테이너 상단 100, 대상 페이지 상단 700 → 600px 아래로
+    expect(scrollTopForPage(0, 100, 700)).toBe(600);
+    expect(scrollTopForPage(2000, 100, 700)).toBe(2600);
+  });
+
+  it("위에 있는 페이지로 올라간다", () => {
+    // 대상이 컨테이너보다 위(음수 방향) → scrollTop 감소
+    expect(scrollTopForPage(2000, 100, -500)).toBe(1400);
+  });
+
+  it("이미 맨 위에 걸린 페이지면 그대로", () => {
+    expect(scrollTopForPage(1500, 100, 100)).toBe(1500);
+  });
+
+  it("음수로 내려가지 않는다(맨 위에서 클램프)", () => {
+    expect(scrollTopForPage(0, 100, -500)).toBe(0);
   });
 });
 

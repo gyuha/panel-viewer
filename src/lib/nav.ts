@@ -18,6 +18,21 @@ export function prevPage(page: number, count: number): number {
   return clampPage(page - 1, count);
 }
 
+/**
+ * 스크롤 컨테이너를 대상 페이지가 맨 위에 오도록 옮길 때의 새 scrollTop.
+ * 좌표는 둘 다 getBoundingClientRect().top(뷰포트 기준)을 넣는다.
+ *
+ * offsetTop을 쓰지 않는 이유: .continuous에는 position 지정이 없어 자식 .cont-page의
+ * offsetParent가 이 컨테이너가 아니다. offsetTop은 엉뚱한 조상 기준 값이라 조용히 틀린다.
+ */
+export function scrollTopForPage(
+  curScrollTop: number,
+  containerTop: number,
+  pageTop: number,
+): number {
+  return Math.max(0, curScrollTop + (pageTop - containerTop));
+}
+
 export interface WheelTurn {
   /** 이번 휠 입력으로 페이지를 넘길지 여부. */
   turn: boolean;

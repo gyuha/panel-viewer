@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { ViewMode } from "../lib/nav";
 import type { PageFit, ContinuousFit } from "../lib/api";
 import {
@@ -10,7 +10,8 @@ import {
   type CustomKeys,
 } from "../lib/keymap";
 import { PageView } from "./PageView";
-import { ContinuousView } from "./ContinuousView";
+import { ContinuousView, type ContinuousHandle } from "./ContinuousView";
+import { PageSeekBar } from "./PageSeekBar";
 
 interface ViewerProps {
   name: string;
@@ -23,6 +24,8 @@ interface ViewerProps {
   seamless: boolean;
   customKeys: CustomKeys;
   shortcutsEnabled: boolean;
+  seekOpen: boolean;
+  onSeekOpenChange: (open: boolean) => void;
   panelHidden: boolean;
   onTogglePanel: () => void;
   hasPrevFile: boolean;
@@ -52,6 +55,8 @@ export function Viewer({
   seamless,
   customKeys,
   shortcutsEnabled,
+  seekOpen,
+  onSeekOpenChange,
   panelHidden,
   onTogglePanel,
   hasPrevFile,
@@ -63,11 +68,28 @@ export function Viewer({
   onModeChange,
   onClose,
 }: ViewerProps) {
+  const continuousRef = useRef<ContinuousHandle>(null);
+
+  // 탐색 바가 열려 있으면 기존 읽기 단축키를 죽인다. window 리스너들은 포커스를 보지 않으므로,
+  // 이게 없으면 → 한 번에 슬라이더 1칸과 nextPage()가 함께 발동해 두 장이 넘어간다.
+  // (설정 모달 쪽 차단은 App이 shortcutsEnabled로 내려보낸다 — 게이트마다 소유자가 하나씩.)
+  const keysLive = shortcutsEnabled && !seekOpen;
+
+  // 페이지 탐색: 페이지 상태를 옮기고, 연속 모드에서는 컨테이너도 그 페이지로 스크롤한다
+  // (연속 뷰는 page prop 변경만으로는 움직이지 않는다).
+  const handleSeek = useCallback(
+    (next: number) => {
+      onPageChange(next);
+      if (mode === "continuous") continuousRef.current?.scrollToPage(next);
+    },
+    [mode, onPageChange],
+  );
+
   // 모드 무관 단축키: 닫기(Esc) + 파일 이동 + 보기 모드 전환(한장·연속 두 모드). 설정 모달 열림 중엔 미발동.
   // (앱 종료 x는 App의 전역 핸들러가 담당)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!shortcutsEnabled) return;
+      if (!keysLive) return;
       if (e.key === "Escape") {
         onClose();
         return;
@@ -89,13 +111,13 @@ export function Viewer({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [shortcutsEnabled, customKeys, mode, onClose, onNextFile, onPrevFile, onModeChange]);
+  }, [keysLive, customKeys, mode, onClose, onNextFile, onPrevFile, onModeChange]);
 
   // 마우스 뒤로/앞으로 버튼 → 이전/다음 파일(고정 매핑, 재지정 불가). 설정 모달 열림 중엔 미발동.
   // preventDefault는 웹뷰가 스스로 히스토리를 되감는 것에 대한 보험(실측에선 popstate가 없었다).
   useEffect(() => {
     const onMouse = (e: MouseEvent) => {
-      if (!shortcutsEnabled) return;
+      if (!keysLive) return;
       const action = mouseAction(e.button);
       if (action === "prevFile") {
         e.preventDefault();
@@ -107,7 +129,7 @@ export function Viewer({
     };
     window.addEventListener("mousedown", onMouse);
     return () => window.removeEventListener("mousedown", onMouse);
-  }, [shortcutsEnabled, onPrevFile, onNextFile]);
+  }, [keysLive, onPrevFile, onNextFile]);
 
   return (
     <div className="viewer no-select">
@@ -156,15 +178,20 @@ export function Viewer({
           ))}
         </div>
 
-        <span className="viewer-count">
+        <button
+          className={`viewer-count ${seekOpen ? "active" : ""}`}
+          onClick={() => onSeekOpenChange(!seekOpen)}
+          title="페이지 탐색"
+        >
           {page + 1} / {pageCount}
-        </span>
+        </button>
       </header>
 
       {mode === "continuous" ? (
         // key에 token 포함 → 파일 전환 시 재마운트되어 새 파일의 현재 페이지로 스크롤
         <ContinuousView
           key={`continuous-${token}`}
+          ref={continuousRef}
           pageCount={pageCount}
           page={page}
           token={token}
@@ -186,8 +213,17 @@ export function Viewer({
           hasNextFile={hasNextFile}
           onOpenAdjacent={onOpenAdjacent}
           customKeys={customKeys}
-          shortcutsEnabled={shortcutsEnabled}
+          shortcutsEnabled={keysLive}
           onPageChange={onPageChange}
+        />
+      )}
+
+      {seekOpen && (
+        <PageSeekBar
+          page={page}
+          pageCount={pageCount}
+          onSeek={handleSeek}
+          onClose={() => onSeekOpenChange(false)}
         />
       )}
     </div>
