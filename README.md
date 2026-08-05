@@ -2,6 +2,10 @@
 
 **Tauri 2 + React + TypeScript** 기반의 macOS 데스크톱 만화/웹툰 뷰어입니다. `cbz` · `cbr` · `zip` 아카이브를 열어 페이지를 읽고, 왼쪽 파일 패널로 폴더를 탐색합니다.
 
+<p align="center">
+  <img src="screenshot.png" alt="Panel Viewer — 한장 모드로 cbz 아카이브를 읽는 화면" width="440">
+</p>
+
 > 개발·검증은 **macOS 우선**입니다. Tauri 설정은 크로스플랫폼이지만 macOS에서만 실제로 검증합니다.
 
 ## 주요 기능
