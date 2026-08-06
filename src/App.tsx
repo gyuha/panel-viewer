@@ -23,6 +23,7 @@ import {
   deleteHistory,
   resetHistory,
   quitApp,
+  setAlwaysOnTop,
   type ArchiveInfo,
   type DirListing,
   type PageFit,
@@ -35,6 +36,7 @@ import { basename, indexInFolder } from "./lib/folder";
 import { Viewer } from "./components/Viewer";
 import { FilePanel } from "./components/FilePanel";
 import { SettingsModal } from "./components/SettingsModal";
+import { AlwaysOnTopIcon } from "./components/AlwaysOnTopIcon";
 import "./App.css";
 
 const ARCHIVE_EXTS = ["cbz", "cbr", "zip"];
@@ -62,6 +64,8 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [seekOpen, setSeekOpen] = useState(false);
   const [panelHidden, setPanelHidden] = useState(false);
+  // 세터 이름이 setAlwaysOnTopState인 것은 api의 setAlwaysOnTop을 섀도잉하지 않기 위함이다.
+  const [alwaysOnTop, setAlwaysOnTopState] = useState(false);
   const [pageFit, setPageFit] = useState<PageFit>("screen");
   const [continuousFit, setContinuousFit] = useState<ContinuousFit>("width");
   const [openLastFile, setOpenLastFile] = useState(true);
@@ -146,6 +150,8 @@ function App() {
       // 저장된 커스텀 키를 기본값과 병합(없는 동작은 기본값 유지)
       setCustomKeys({ ...DEFAULT_CUSTOM, ...(s.keybindings ?? {}) });
       setPanelHidden(s.panelHidden ?? false);
+      // 창에 적용하는 것은 백엔드 setup()이 이미 했다. 여기선 버튼 표시용 상태만 맞춘다.
+      setAlwaysOnTopState(s.alwaysOnTop ?? false);
       setPageFit(s.pageFit ?? "screen");
       setContinuousFit(s.continuousFit ?? "width");
       setOpenLastFile(s.openLastFile ?? true);
@@ -180,7 +186,13 @@ function App() {
     void savePanelHidden(next);
   }, [panelHidden]);
 
-  // 전역 단축키: Cmd+,(메뉴 열기=설정, 고정) · 앱 종료 · 패널 토글(둘 다 재지정 가능).
+  const toggleAlwaysOnTop = useCallback(() => {
+    const next = !alwaysOnTop;
+    setAlwaysOnTopState(next);
+    void setAlwaysOnTop(next);
+  }, [alwaysOnTop]);
+
+  // 전역 단축키: Cmd+,(메뉴 열기=설정, 고정) · 앱 종료 · 패널 토글 · 항상 위 토글(뒤 셋은 재지정 가능).
   // 파일 안 열려 있어도 동작. 설정 모달·페이지 탐색 바 열림 중엔 미발동
   // (탐색 바에서 슬라이더를 조작하는 중에 x가 앱을 종료시키면 안 된다).
   useEffect(() => {
@@ -203,11 +215,16 @@ function App() {
       if (customKeys.togglePanel !== "" && k === customKeys.togglePanel) {
         e.preventDefault();
         togglePanel();
+        return;
+      }
+      if (customKeys.toggleAlwaysOnTop !== "" && k === customKeys.toggleAlwaysOnTop) {
+        e.preventDefault();
+        toggleAlwaysOnTop();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [settingsOpen, seekOpen, customKeys, togglePanel]);
+  }, [settingsOpen, seekOpen, customKeys, togglePanel, toggleAlwaysOnTop]);
 
   // 파일 연결로 실행 중 넘어오는 open-archive 이벤트 처리(시작 시 대기 파일은 위 복원 효과에서 소비)
   useEffect(() => {
@@ -360,6 +377,8 @@ function App() {
             onSeekOpenChange={setSeekOpen}
             panelHidden={panelHidden}
             onTogglePanel={togglePanel}
+            alwaysOnTop={alwaysOnTop}
+            onToggleAlwaysOnTop={toggleAlwaysOnTop}
             hasPrevFile={hasPrevFile}
             hasNextFile={hasNextFile}
             onPrevFile={() => {
@@ -393,6 +412,16 @@ function App() {
                 ☰
               </button>
             )}
+            {/* 빈 화면에도 둔다 — 항상 위는 영속되므로, 시작 시 파일이 없으면 툴바가 없어
+                켜짐 상태를 알 방법이 아예 사라진다(그러면 다른 창이 안 올라오는 원인을 못 짚는다). */}
+            <button
+              className={`always-on-top-btn floating ${alwaysOnTop ? "active" : ""}`}
+              onClick={toggleAlwaysOnTop}
+              title={withKey("항상 위", customKeys.toggleAlwaysOnTop)}
+              aria-label="항상 위"
+            >
+              <AlwaysOnTopIcon />
+            </button>
             <div className="empty-card">
               <h1 className="empty-title">Panel Viewer</h1>
               <p className="empty-sub">왼쪽에서 파일을 고르거나 파일을 열어보세요.</p>

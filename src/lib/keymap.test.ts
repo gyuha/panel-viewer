@@ -107,6 +107,30 @@ describe("앱 종료 동작", () => {
   });
 });
 
+describe("항상 위 토글 동작", () => {
+  it("toggleAlwaysOnTop이 동작 목록에 있고 기본 커스텀 키는 't'", () => {
+    expect(ACTIONS).toContain("toggleAlwaysOnTop");
+    expect(DEFAULT_CUSTOM.toggleAlwaysOnTop).toBe("t");
+  });
+
+  it("표준 키는 없다(커스텀 키로만 동작, 재지정 가능)", () => {
+    expect(STANDARD_KEYS.toggleAlwaysOnTop).toEqual([]);
+  });
+
+  it("설정 표에 쓰는 라벨", () => {
+    expect(ACTION_LABELS.toggleAlwaysOnTop).toBe("항상 위");
+  });
+
+  it("resolve는 toggleAlwaysOnTop을 반환하지 않는다(App 전역에서 별도 처리)", () => {
+    expect(resolve("t", DEFAULT_CUSTOM, "page")).toBeNull();
+    expect(resolve("t", DEFAULT_CUSTOM, "continuous")).toBeNull();
+  });
+
+  it("'t'는 예약되어 다른 동작이 못 뺏는다(충돌 감지)", () => {
+    expect(findConflict("nextFile", "t", DEFAULT_CUSTOM)).toBe("toggleAlwaysOnTop");
+  });
+});
+
 describe("보기 모드 전환 동작", () => {
   it("modePage·modeContinuous가 동작 목록에 있고 기본 커스텀 키는 '1'/'2'", () => {
     expect(ACTIONS).toContain("modePage");

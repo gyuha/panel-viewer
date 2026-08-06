@@ -91,6 +91,9 @@ pub struct PersistedState {
     /// 마지막 창 크기. 없으면(구버전/최초 실행) None → config 기본 크기 사용.
     #[serde(default)]
     pub window_size: Option<WindowSize>,
+    /// 창을 다른 창 위에 고정한 상태인지. 필드가 없으면(구버전) false(고정 안 함)로 로드.
+    #[serde(default)]
+    pub always_on_top: bool,
     /// 한장 모드 이미지 맞춤. 없으면 기본값(화면에 맞추기).
     #[serde(default)]
     pub page_fit: PageFit,
@@ -120,6 +123,7 @@ impl Default for PersistedState {
             keybindings: HashMap::new(),
             panel_hidden: false,
             window_size: None,
+            always_on_top: false,
             page_fit: PageFit::default(),
             continuous_fit: ContinuousFit::default(),
             last_file: None,
@@ -172,6 +176,7 @@ mod tests {
             keybindings: HashMap::new(),
             panel_hidden: true,
             window_size: None,
+            always_on_top: true,
             page_fit: PageFit::Screen,
             continuous_fit: ContinuousFit::Width,
             last_file: None,
@@ -195,6 +200,7 @@ mod tests {
         assert_eq!(loaded.reading_positions.get("/a/b.cbz"), Some(&37));
         assert_eq!(loaded.keybindings.get("nextFile"), Some(&".".to_string()));
         assert!(loaded.panel_hidden);
+        assert!(loaded.always_on_top);
     }
 
     #[test]
@@ -330,6 +336,30 @@ mod tests {
         assert!(l2.open_last_file); // 없던 필드도 ON 기본
         assert!(!l2.seamless);
         assert_eq!(l2.last_file, None);
+    }
+
+    #[test]
+    fn always_on_top_defaults_off_round_trips_and_migrates() {
+        // 기본값: 꺼짐(다른 창 위로 올리지 않는다)
+        assert!(!PersistedState::default().always_on_top);
+
+        // 라운드트립
+        let p = tmp_file("always_on_top.json");
+        let s = PersistedState {
+            always_on_top: true,
+            ..Default::default()
+        };
+        save(&p, &s).unwrap();
+        assert!(load(&p).always_on_top);
+
+        // 구버전 JSON(필드 없음) → 꺼진 상태로 로드
+        let p2 = tmp_file("no_always_on_top.json");
+        std::fs::write(
+            &p2,
+            br#"{"lastFolder":null,"viewMode":"page","readingPositions":{}}"#,
+        )
+        .unwrap();
+        assert!(!load(&p2).always_on_top);
     }
 
     #[test]

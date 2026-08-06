@@ -22,6 +22,7 @@ export interface PersistedState {
   keybindings: Record<string, string>;
   panelHidden: boolean;
   windowSize: { width: number; height: number } | null;
+  alwaysOnTop: boolean;
   pageFit: PageFit;
   continuousFit: ContinuousFit;
   lastFile: string | null;
@@ -92,6 +93,11 @@ export function savePanelHidden(hidden: boolean): Promise<void> {
 /** 창 크기(논리 픽셀)를 저장한다. 복원은 백엔드 setup()이 담당. */
 export function saveWindowSize(width: number, height: number): Promise<void> {
   return invoke("save_window_size", { width, height });
+}
+
+/** 항상 위 상태를 창에 적용하고 저장한다(적용+저장을 한 번에 — 백엔드가 창을 만진다). */
+export function setAlwaysOnTop(on: boolean): Promise<void> {
+  return invoke("set_always_on_top", { on });
 }
 
 /** 한장 모드 이미지 맞춤을 저장한다. */

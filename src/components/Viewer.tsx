@@ -12,6 +12,7 @@ import {
 import { PageView } from "./PageView";
 import { ContinuousView, type ContinuousHandle } from "./ContinuousView";
 import { PageSeekBar } from "./PageSeekBar";
+import { AlwaysOnTopIcon } from "./AlwaysOnTopIcon";
 
 interface ViewerProps {
   name: string;
@@ -28,6 +29,8 @@ interface ViewerProps {
   onSeekOpenChange: (open: boolean) => void;
   panelHidden: boolean;
   onTogglePanel: () => void;
+  alwaysOnTop: boolean;
+  onToggleAlwaysOnTop: () => void;
   hasPrevFile: boolean;
   hasNextFile: boolean;
   onPrevFile: () => void;
@@ -59,6 +62,8 @@ export function Viewer({
   onSeekOpenChange,
   panelHidden,
   onTogglePanel,
+  alwaysOnTop,
+  onToggleAlwaysOnTop,
   hasPrevFile,
   hasNextFile,
   onPrevFile,
@@ -184,6 +189,15 @@ export function Viewer({
           title="페이지 탐색"
         >
           {page + 1} / {pageCount}
+        </button>
+
+        <button
+          className={`always-on-top-btn ${alwaysOnTop ? "active" : ""}`}
+          onClick={onToggleAlwaysOnTop}
+          title={withKey("항상 위", customKeys.toggleAlwaysOnTop)}
+          aria-label="항상 위"
+        >
+          <AlwaysOnTopIcon />
         </button>
       </header>
 

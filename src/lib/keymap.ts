@@ -11,6 +11,7 @@ export type Action =
   | "modePage"
   | "modeContinuous"
   | "togglePanel"
+  | "toggleAlwaysOnTop"
   | "quitApp";
 
 export const ACTIONS: Action[] = [
@@ -23,6 +24,7 @@ export const ACTIONS: Action[] = [
   "modePage",
   "modeContinuous",
   "togglePanel",
+  "toggleAlwaysOnTop",
   "quitApp",
 ];
 
@@ -36,6 +38,7 @@ export const ACTION_LABELS: Record<Action, string> = {
   modePage: "한장 보기",
   modeContinuous: "연속 보기",
   togglePanel: "파일 패널 토글",
+  toggleAlwaysOnTop: "항상 위",
   quitApp: "앱 종료",
 };
 
@@ -50,6 +53,7 @@ export const STANDARD_KEYS: Record<Action, string[]> = {
   modePage: [],
   modeContinuous: [],
   togglePanel: [],
+  toggleAlwaysOnTop: [],
   quitApp: [],
 };
 
@@ -66,6 +70,7 @@ export const DEFAULT_CUSTOM: CustomKeys = {
   modePage: "1",
   modeContinuous: "2",
   togglePanel: "/",
+  toggleAlwaysOnTop: "t",
   quitApp: "x",
 };
 

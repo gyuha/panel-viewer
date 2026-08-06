@@ -147,6 +147,20 @@ fn save_window_size(width: f64, height: f64, store: State<'_, PersistState>) {
     let _ = state::save(&file, &data);
 }
 
+/// 항상 위 상태를 창에 적용하고 저장한다. 저장만 하는 save_* 계열과 달리 즉시 적용까지 하므로
+/// 이름도 set_이다. 프런트가 창 API를 직접 부르지 않는 것은 창 변경을 Rust가 맡는 기존 방침
+/// (창 크기 복원도 setup()이 한다)을 따르는 것이며, 덕분에 capability 권한 추가도 필요 없다.
+#[tauri::command]
+fn set_always_on_top(on: bool, app: tauri::AppHandle, store: State<'_, PersistState>) {
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.set_always_on_top(on);
+    }
+    let mut s = store.lock().unwrap();
+    s.data.always_on_top = on;
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
 /// 한장 모드 이미지 맞춤을 저장한다.
 #[tauri::command]
 fn save_page_fit(fit: state::PageFit, store: State<'_, PersistState>) {
@@ -310,6 +324,7 @@ pub fn run() {
             let file = app.path().app_data_dir()?.join("state.json");
             let data = state::load(&file);
             let saved_size = data.window_size;
+            let saved_always_on_top = data.always_on_top;
             app.manage(Mutex::new(StateStore { path: file, data }));
 
             // 저장된 창 크기 복원(현재 모니터로 상한 클램프). 없으면 config 기본 크기 유지.
@@ -327,6 +342,13 @@ pub fn run() {
                         .unwrap_or((f64::INFINITY, f64::INFINITY));
                     let (w, h) = state::clamp_window_size(sz.width, sz.height, max_w, max_h);
                     let _ = win.set_size(tauri::LogicalSize::new(w, h));
+                }
+            }
+
+            // 저장된 항상 위 상태 복원. 꺼짐이 기본이라 true일 때만 적용한다.
+            if saved_always_on_top {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.set_always_on_top(true);
                 }
             }
 
@@ -381,6 +403,7 @@ pub fn run() {
             save_keybindings,
             save_panel_hidden,
             save_window_size,
+            set_always_on_top,
             save_page_fit,
             save_continuous_fit,
             save_last_file,

@@ -11,11 +11,13 @@ vi.mock("../lib/api", async (importOriginal) => ({
 
 const noop = () => {};
 
-function setup(over: { seekOpen?: boolean } = {}) {
+function setup(over: { seekOpen?: boolean; alwaysOnTop?: boolean } = {}) {
   const seekOpen = over.seekOpen ?? false;
+  const alwaysOnTop = over.alwaysOnTop ?? false;
   const onPageChange = vi.fn();
   const onSeekOpenChange = vi.fn();
   const onClose = vi.fn();
+  const onToggleAlwaysOnTop = vi.fn();
   render(
     <Viewer
       name="원피스-002.cbz"
@@ -34,6 +36,8 @@ function setup(over: { seekOpen?: boolean } = {}) {
       onSeekOpenChange={onSeekOpenChange}
       panelHidden={false}
       onTogglePanel={noop}
+      alwaysOnTop={alwaysOnTop}
+      onToggleAlwaysOnTop={onToggleAlwaysOnTop}
       hasPrevFile={false}
       hasNextFile={false}
       onPrevFile={noop}
@@ -44,7 +48,7 @@ function setup(over: { seekOpen?: boolean } = {}) {
       onClose={onClose}
     />,
   );
-  return { onPageChange, onSeekOpenChange, onClose };
+  return { onPageChange, onSeekOpenChange, onClose, onToggleAlwaysOnTop };
 }
 
 describe("Viewer — 페이지 탐색 바 배선", () => {
@@ -82,5 +86,25 @@ describe("Viewer — 페이지 탐색 바 배선", () => {
     const { onClose } = setup();
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Viewer — 항상 위 버튼", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("버튼을 누르면 토글 콜백이 불린다", () => {
+    const { onToggleAlwaysOnTop } = setup();
+    fireEvent.click(screen.getByRole("button", { name: "항상 위" }));
+    expect(onToggleAlwaysOnTop).toHaveBeenCalledTimes(1);
+  });
+
+  it("꺼져 있으면 켜짐 표시가 없다", () => {
+    setup();
+    expect(screen.getByRole("button", { name: "항상 위" }).className).not.toContain("active");
+  });
+
+  it("켜져 있으면 켜짐 표시가 붙는다", () => {
+    setup({ alwaysOnTop: true });
+    expect(screen.getByRole("button", { name: "항상 위" }).className).toContain("active");
   });
 });

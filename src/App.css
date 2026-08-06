@@ -76,7 +76,8 @@
 }
 /* 패널 토글 아이콘(패널 헤더 · 뷰어 툴바 · 빈 화면 공용) */
 .panel-toggle-btn,
-.panel-show-btn {
+.panel-show-btn,
+.always-on-top-btn {
   flex: 0 0 auto;
   border: none;
   background: transparent;
@@ -88,7 +89,8 @@
   cursor: pointer;
 }
 .panel-toggle-btn:hover,
-.panel-show-btn:hover {
+.panel-show-btn:hover,
+.always-on-top-btn:hover {
   background: var(--surface-strong);
 }
 /* 빈 화면에서 패널 숨김 시 좌상단 고정 */
@@ -96,6 +98,30 @@
   position: absolute;
   top: var(--s-xs);
   left: var(--s-xs);
+}
+/* 아이콘은 단색 SVG라 버튼의 color를 그대로 따른다(이모지는 CSS color를 무시해서
+   켜짐 상태의 글자색이 먹지 않았다). */
+.always-on-top-btn svg {
+  display: block;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* 켜짐은 배경색 없이 모양만으로 보인다 — 바늘이 사라지고 머리가 바늘 길이(7 유저 단위)만큼
+   내려가 "핀을 눌러 박은" 모양이 된다. 실루엣 아래끝이 바늘 끝이 있던 y=22에 그대로 남아
+   버튼 안에서 아이콘이 들썩이지 않는다. */
+.always-on-top-btn.active .pin-needle {
+  display: none;
+}
+.always-on-top-btn.active .pin-head {
+  transform: translateY(7px);
+}
+/* 빈 화면용은 우상단 고정 — panel-show-btn이 좌상단이고 조건부 렌더라 겹칠 여지를 없앤다. */
+.always-on-top-btn.floating {
+  position: absolute;
+  top: var(--s-xs);
+  right: var(--s-xs);
 }
 .panel-list {
   flex: 1 1 auto;
