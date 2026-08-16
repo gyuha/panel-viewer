@@ -2903,7 +2903,7 @@ dependencies = [
 
 [[package]]
 name = "panel-viewer"
-version = "0.2.10"
+version = "0.2.11"
 dependencies = [
  "image",
  "serde",
