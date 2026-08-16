@@ -458,6 +458,30 @@
   font-style: normal;
   margin-top: 2px;
 }
+/* 토글 아래에 딸린 보조 입력(커서 자동 숨김의 지연 초 등) */
+.toggle-extra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.delay-input {
+  width: 52px;
+  padding: 3px 6px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-card);
+  color: var(--ink);
+  font-size: 12px;
+}
+.delay-input:disabled {
+  opacity: 0.45;
+}
+.delay-unit {
+  user-select: none;
+}
 /* 세그먼트 선택 컨트롤 */
 .seg {
   display: inline-flex;
@@ -828,6 +852,15 @@
   max-width: none;
   max-height: none;
   object-fit: unset;
+}
+
+/* 커서 자동 숨김: 이미지 영역에서만 커서를 감춘다(툴바·탐색 바는 그대로).
+   .click-zone은 아래에서 w-resize/e-resize를 직접 지정하므로 상속만으로는 덮이지 않는다 —
+   클래스 3개짜리 선택자로 특정성을 이겨 화면의 80%를 차지하는 클릭 영역까지 함께 감춘다. */
+.viewer.cursor-hidden .viewer-stage,
+.viewer.cursor-hidden .continuous,
+.viewer.cursor-hidden .click-zone {
+  cursor: none;
 }
 
 /* 좌우 클릭 영역 (투명 오버레이) */

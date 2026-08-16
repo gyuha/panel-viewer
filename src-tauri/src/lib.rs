@@ -206,6 +206,17 @@ fn save_seamless(enabled: bool, store: State<'_, PersistState>) {
     let _ = state::save(&file, &data);
 }
 
+/// "커서 자동 숨김" 옵션을 저장한다(켜짐 여부와 지연 초는 한 설정의 두 축이라 커맨드 하나).
+/// 지연은 프런트가 보낸 값을 그대로 믿지 않고 1~10초로 클램프한다.
+#[tauri::command]
+fn save_cursor_auto_hide(enabled: bool, delay: u32, store: State<'_, PersistState>) {
+    let mut s = store.lock().unwrap();
+    s.data.cursor_auto_hide = enabled;
+    s.data.cursor_hide_delay = delay.clamp(1, 10);
+    let (file, data) = (s.path.clone(), s.data.clone());
+    let _ = state::save(&file, &data);
+}
+
 /// 히스토리 최대 개수.
 const HISTORY_CAP: usize = 500;
 
@@ -409,6 +420,7 @@ pub fn run() {
             save_last_file,
             save_open_last_file,
             save_seamless,
+            save_cursor_auto_hide,
             record_history,
             delete_history,
             reset_history,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ViewMode } from "../lib/nav";
 import type { PageFit, ContinuousFit } from "../lib/api";
 import {
@@ -23,6 +23,8 @@ interface ViewerProps {
   pageFit: PageFit;
   continuousFit: ContinuousFit;
   seamless: boolean;
+  cursorAutoHide: boolean;
+  cursorHideDelay: number;
   customKeys: CustomKeys;
   shortcutsEnabled: boolean;
   seekOpen: boolean;
@@ -46,6 +48,47 @@ const MODES: { key: ViewMode; label: string; title: string; action: Action }[] =
   { key: "continuous", label: "연속", title: "연속 스크롤 보기", action: "modeContinuous" },
 ];
 
+/**
+ * 마우스가 delaySec초 동안 "실제로" 움직이지 않으면 true(=커서 숨김)를 돌려준다.
+ *
+ * mousemove만 듣는다 — 클릭·휠은 커서를 되살리지도, 타이머를 리셋하지도 않는다(요구사항).
+ * 좌표 비교 가드가 핵심이다: 웹뷰는 콘텐츠 스크롤이나 이미지 교체 때 마우스가 물리적으로
+ * 움직이지 않았는데도 mousemove를 합성해 쏠 수 있고, 그러면 연속 모드에서 휠을 굴릴 때마다
+ * 커서가 되살아나 "휠을 해도 보이지 않게"가 깨진다. clientX/Y는 뷰포트 기준이라 커서가
+ * 그대로면 콘텐츠가 아무리 스크롤돼도 값이 변하지 않으므로, 같은 좌표는 이동이 아니다.
+ */
+function useIdleCursor(enabled: boolean, delaySec: number): boolean {
+  const [hidden, setHidden] = useState(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setHidden(false);
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const arm = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setHidden(true), delaySec * 1000);
+    };
+    const onMove = (e: MouseEvent) => {
+      const prev = lastPos.current;
+      if (prev && prev.x === e.clientX && prev.y === e.clientY) return; // 합성 이벤트 — 이동 아님
+      lastPos.current = { x: e.clientX, y: e.clientY };
+      setHidden(false);
+      arm();
+    };
+    window.addEventListener("mousemove", onMove);
+    arm(); // 파일을 연 뒤 마우스를 한 번도 안 움직여도 숨는다
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      if (timer) clearTimeout(timer);
+    };
+  }, [enabled, delaySec]);
+
+  return hidden;
+}
+
 /** 보기 모드에 따라 페이지/연속 뷰를 전환하는 컨테이너. 현재 페이지는 전환 시 유지된다. */
 export function Viewer({
   name,
@@ -56,6 +99,8 @@ export function Viewer({
   pageFit,
   continuousFit,
   seamless,
+  cursorAutoHide,
+  cursorHideDelay,
   customKeys,
   shortcutsEnabled,
   seekOpen,
@@ -74,6 +119,7 @@ export function Viewer({
   onClose,
 }: ViewerProps) {
   const continuousRef = useRef<ContinuousHandle>(null);
+  const cursorHidden = useIdleCursor(cursorAutoHide, cursorHideDelay);
 
   // 탐색 바가 열려 있으면 기존 읽기 단축키를 죽인다. window 리스너들은 포커스를 보지 않으므로,
   // 이게 없으면 → 한 번에 슬라이더 1칸과 nextPage()가 함께 발동해 두 장이 넘어간다.
@@ -137,7 +183,7 @@ export function Viewer({
   }, [keysLive, onPrevFile, onNextFile]);
 
   return (
-    <div className="viewer no-select">
+    <div className={`viewer no-select ${cursorHidden ? "cursor-hidden" : ""}`}>
       <header className="viewer-bar">
         {panelHidden && (
           <button

@@ -71,6 +71,11 @@ fn default_true() -> bool {
     true
 }
 
+/// 커서 자동 숨김 지연(초) 기본값.
+fn default_hide_delay() -> u32 {
+    1
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PersistedState {
@@ -112,6 +117,12 @@ pub struct PersistedState {
     /// 열람 히스토리(최신순). 필드가 없으면(구버전) 빈 목록으로 로드.
     #[serde(default)]
     pub history: Vec<HistoryEntry>,
+    /// 커서 자동 숨김(이미지 위 마우스 정지 시 커서 감추기). 필드가 없으면(구버전) ON.
+    #[serde(default = "default_true")]
+    pub cursor_auto_hide: bool,
+    /// 커서 자동 숨김 지연(초, 1~10). 필드가 없으면(구버전) 1초.
+    #[serde(default = "default_hide_delay")]
+    pub cursor_hide_delay: u32,
 }
 
 impl Default for PersistedState {
@@ -130,6 +141,8 @@ impl Default for PersistedState {
             open_last_file: true,
             seamless: false,
             history: Vec::new(),
+            cursor_auto_hide: true,
+            cursor_hide_delay: 1,
         }
     }
 }
@@ -183,6 +196,8 @@ mod tests {
             open_last_file: true,
             seamless: false,
             history: Vec::new(),
+            cursor_auto_hide: true,
+            cursor_hide_delay: 1,
         };
         s.reading_positions.insert("/a/b.cbz".into(), 37);
         s.reading_positions.insert("/a/c.cbr".into(), 4);
@@ -360,6 +375,37 @@ mod tests {
         )
         .unwrap();
         assert!(!load(&p2).always_on_top);
+    }
+
+    #[test]
+    fn cursor_auto_hide_defaults_on_round_trips_and_migrates() {
+        // 기본값: 켜짐 / 1초
+        let d = PersistedState::default();
+        assert!(d.cursor_auto_hide);
+        assert_eq!(d.cursor_hide_delay, 1);
+
+        // 라운드트립
+        let p = tmp_file("cursor_hide.json");
+        let s = PersistedState {
+            cursor_auto_hide: false,
+            cursor_hide_delay: 5,
+            ..Default::default()
+        };
+        save(&p, &s).unwrap();
+        let l = load(&p);
+        assert!(!l.cursor_auto_hide);
+        assert_eq!(l.cursor_hide_delay, 5);
+
+        // 구버전 JSON(필드 없음) → 켜짐 / 1초
+        let p2 = tmp_file("no_cursor_hide.json");
+        std::fs::write(
+            &p2,
+            br#"{"lastFolder":null,"viewMode":"page","readingPositions":{}}"#,
+        )
+        .unwrap();
+        let l2 = load(&p2);
+        assert!(l2.cursor_auto_hide);
+        assert_eq!(l2.cursor_hide_delay, 1);
     }
 
     #[test]

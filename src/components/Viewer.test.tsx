@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import { DEFAULT_CUSTOM } from "../lib/keymap";
 import { Viewer } from "./Viewer";
 
@@ -11,14 +11,23 @@ vi.mock("../lib/api", async (importOriginal) => ({
 
 const noop = () => {};
 
-function setup(over: { seekOpen?: boolean; alwaysOnTop?: boolean } = {}) {
+function setup(
+  over: {
+    seekOpen?: boolean;
+    alwaysOnTop?: boolean;
+    cursorAutoHide?: boolean;
+    cursorHideDelay?: number;
+  } = {},
+) {
   const seekOpen = over.seekOpen ?? false;
   const alwaysOnTop = over.alwaysOnTop ?? false;
+  // 기본은 꺼짐 — 커서 숨김을 다루지 않는 테스트에 1초짜리 타이머가 걸리지 않게 한다.
+  const cursorAutoHide = over.cursorAutoHide ?? false;
   const onPageChange = vi.fn();
   const onSeekOpenChange = vi.fn();
   const onClose = vi.fn();
   const onToggleAlwaysOnTop = vi.fn();
-  render(
+  const { container } = render(
     <Viewer
       name="원피스-002.cbz"
       pageCount={97}
@@ -28,6 +37,8 @@ function setup(over: { seekOpen?: boolean; alwaysOnTop?: boolean } = {}) {
       pageFit="screen"
       continuousFit="width"
       seamless={false}
+      cursorAutoHide={cursorAutoHide}
+      cursorHideDelay={over.cursorHideDelay ?? 1}
       customKeys={DEFAULT_CUSTOM}
       // 항상 true — 차단은 Viewer가 seekOpen으로 스스로 해야 한다.
       // (여기서 !seekOpen을 넣으면 Viewer가 게이트를 빠뜨려도 테스트가 통과해 허수가 된다.)
@@ -48,7 +59,7 @@ function setup(over: { seekOpen?: boolean; alwaysOnTop?: boolean } = {}) {
       onClose={onClose}
     />,
   );
-  return { onPageChange, onSeekOpenChange, onClose, onToggleAlwaysOnTop };
+  return { onPageChange, onSeekOpenChange, onClose, onToggleAlwaysOnTop, container };
 }
 
 describe("Viewer — 페이지 탐색 바 배선", () => {
@@ -106,5 +117,43 @@ describe("Viewer — 항상 위 버튼", () => {
   it("켜져 있으면 켜짐 표시가 붙는다", () => {
     setup({ alwaysOnTop: true });
     expect(screen.getByRole("button", { name: "항상 위" }).className).toContain("active");
+  });
+});
+
+describe("Viewer — 커서 자동 숨김", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const root = (container: HTMLElement) => container.querySelector(".viewer")!;
+  const wait = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
+
+  it("지연이 지나면 루트에 cursor-hidden이 붙고, 꺼져 있으면 붙지 않는다", () => {
+    const { container } = setup({ cursorAutoHide: true, cursorHideDelay: 1 });
+    expect(root(container).className).not.toContain("cursor-hidden");
+    wait(999);
+    expect(root(container).className).not.toContain("cursor-hidden");
+    wait(1);
+    expect(root(container).className).toContain("cursor-hidden");
+
+    const off = setup({ cursorAutoHide: false });
+    wait(5000);
+    expect(root(off.container).className).not.toContain("cursor-hidden");
+  });
+
+  it("숨은 뒤 클릭·휠·같은 좌표 mousemove는 커서를 되살리지 않고, 실제 이동만 되살린다", () => {
+    // 같은 좌표 가드가 없으면 웹뷰가 스크롤·이미지 교체 때 합성해 쏘는 mousemove에
+    // 커서가 되살아나 "휠을 해도 보이지 않게"가 조용히 깨진다.
+    const { container } = setup({ cursorAutoHide: true, cursorHideDelay: 1 });
+    fireEvent.mouseMove(window, { clientX: 10, clientY: 20 });
+    wait(1000);
+    expect(root(container).className).toContain("cursor-hidden");
+
+    fireEvent.click(root(container));
+    fireEvent.wheel(root(container), { deltaY: 120 });
+    fireEvent.mouseMove(window, { clientX: 10, clientY: 20 }); // 좌표 동일 = 이동 아님
+    expect(root(container).className).toContain("cursor-hidden");
+
+    fireEvent.mouseMove(window, { clientX: 11, clientY: 20 }); // 실제 이동
+    expect(root(container).className).not.toContain("cursor-hidden");
   });
 });

@@ -19,6 +19,7 @@ import {
   saveLastFile,
   saveOpenLastFile,
   saveSeamless,
+  saveCursorAutoHide,
   recordHistory,
   deleteHistory,
   resetHistory,
@@ -70,6 +71,8 @@ function App() {
   const [continuousFit, setContinuousFit] = useState<ContinuousFit>("width");
   const [openLastFile, setOpenLastFile] = useState(true);
   const [seamless, setSeamless] = useState(false);
+  const [cursorAutoHide, setCursorAutoHide] = useState(true);
+  const [cursorHideDelay, setCursorHideDelay] = useState(1);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   const [fileToken, setFileToken] = useState("");
@@ -156,6 +159,8 @@ function App() {
       setContinuousFit(s.continuousFit ?? "width");
       setOpenLastFile(s.openLastFile ?? true);
       setSeamless(s.seamless ?? false);
+      setCursorAutoHide(s.cursorAutoHide ?? true);
+      setCursorHideDelay(s.cursorHideDelay ?? 1);
       setHistory(s.history ?? []);
       setReady(true);
       void navigate(s.lastFolder); // 현재 폴더를 마지막 폴더(없으면 홈)로
@@ -283,6 +288,16 @@ function App() {
     void saveSeamless(enabled);
   }, []);
 
+  // 켜짐 여부와 지연 초는 한 설정이라 항상 함께 저장한다(백엔드 커맨드도 하나).
+  const handleCursorAutoHide = useCallback(
+    (enabled: boolean, delaySec: number) => {
+      setCursorAutoHide(enabled);
+      setCursorHideDelay(delaySec);
+      void saveCursorAutoHide(enabled, delaySec);
+    },
+    [],
+  );
+
   const handleDeleteHistory = useCallback((path: string) => {
     setHistory((prev) => prev.filter((e) => e.path !== path));
     void deleteHistory(path);
@@ -371,6 +386,8 @@ function App() {
             pageFit={pageFit}
             continuousFit={continuousFit}
             seamless={seamless}
+            cursorAutoHide={cursorAutoHide}
+            cursorHideDelay={cursorHideDelay}
             customKeys={customKeys}
             shortcutsEnabled={!settingsOpen}
             seekOpen={seekOpen}
@@ -448,6 +465,9 @@ function App() {
           seamless={seamless}
           onSetOpenLastFile={handleOpenLastFile}
           onSetSeamless={handleSeamless}
+          cursorAutoHide={cursorAutoHide}
+          cursorHideDelay={cursorHideDelay}
+          onSetCursorAutoHide={handleCursorAutoHide}
           onClose={() => setSettingsOpen(false)}
         />
       )}

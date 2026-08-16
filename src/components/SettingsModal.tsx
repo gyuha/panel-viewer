@@ -24,7 +24,19 @@ interface SettingsModalProps {
   seamless: boolean;
   onSetOpenLastFile: (enabled: boolean) => void;
   onSetSeamless: (enabled: boolean) => void;
+  cursorAutoHide: boolean;
+  cursorHideDelay: number;
+  onSetCursorAutoHide: (enabled: boolean, delaySec: number) => void;
   onClose: () => void;
+}
+
+/** 커서 자동 숨김 지연(초) 허용 범위. 범위 밖·빈 값·비숫자는 가장 가까운 유효값으로 클램프. */
+const HIDE_DELAY_MIN = 1;
+const HIDE_DELAY_MAX = 10;
+
+function clampDelay(v: number): number {
+  if (!Number.isFinite(v)) return HIDE_DELAY_MIN;
+  return Math.min(HIDE_DELAY_MAX, Math.max(HIDE_DELAY_MIN, Math.round(v)));
 }
 
 const PAGE_FIT_OPTIONS: { key: PageFit; label: string }[] = [
@@ -88,6 +100,9 @@ export function SettingsModal({
   seamless,
   onSetOpenLastFile,
   onSetSeamless,
+  cursorAutoHide,
+  cursorHideDelay,
+  onSetCursorAutoHide,
   onClose,
 }: SettingsModalProps) {
   const [tab, setTab] = useState<Tab>("general");
@@ -183,6 +198,36 @@ export function SettingsModal({
                 <em className="toggle-desc">
                   마지막 페이지에서 다음으로 넘기면 다음 파일을, 첫 페이지에서 이전으로 넘기면 이전 파일을 엽니다.
                 </em>
+              </span>
+            </label>
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={cursorAutoHide}
+                onChange={(e) => onSetCursorAutoHide(e.target.checked, cursorHideDelay)}
+              />
+              <span>
+                커서 자동 숨김
+                <em className="toggle-desc">
+                  이미지 위에서 마우스를 움직이지 않으면 지정한 시간 뒤 커서를 숨깁니다. 클릭·휠로는 다시 나타나지 않습니다.
+                </em>
+                <span className="toggle-extra">
+                  <input
+                    type="number"
+                    className="delay-input"
+                    min={HIDE_DELAY_MIN}
+                    max={HIDE_DELAY_MAX}
+                    step={1}
+                    value={cursorHideDelay}
+                    disabled={!cursorAutoHide}
+                    // 클릭이 바깥 label로 전파되면 체크박스가 토글된다.
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) =>
+                      onSetCursorAutoHide(cursorAutoHide, clampDelay(e.target.valueAsNumber))
+                    }
+                  />
+                  <span className="delay-unit">초 후 숨김</span>
+                </span>
               </span>
             </label>
           </div>

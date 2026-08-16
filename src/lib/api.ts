@@ -29,6 +29,8 @@ export interface PersistedState {
   openLastFile: boolean;
   seamless: boolean;
   history: HistoryEntry[];
+  cursorAutoHide: boolean;
+  cursorHideDelay: number;
 }
 
 export type EntryKind = "folder" | "archive" | "image";
@@ -123,6 +125,11 @@ export function saveOpenLastFile(enabled: boolean): Promise<void> {
 /** "파일 이어보기" 옵션을 저장한다. */
 export function saveSeamless(enabled: boolean): Promise<void> {
   return invoke("save_seamless", { enabled });
+}
+
+/** "커서 자동 숨김" 옵션을 저장한다(켜짐 여부와 지연 초를 함께 — 한 설정의 두 축). */
+export function saveCursorAutoHide(enabled: boolean, delaySec: number): Promise<void> {
+  return invoke("save_cursor_auto_hide", { enabled, delay: delaySec });
 }
 
 /** 열람 히스토리에 아카이브를 기록한다(열기 성공 시 호출). */
