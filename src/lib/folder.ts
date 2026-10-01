@@ -13,3 +13,12 @@ export function indexInFolder(archivePaths: string[], target: string): number {
   const t = basename(target).normalize("NFC");
   return archivePaths.findIndex((p) => basename(p).normalize("NFC") === t);
 }
+
+/** 새 목록의 폴더들 중 방금 떠난 폴더(leftPath)의 경로. 없으면 null. 이름은 NFC 정규화로 비교. */
+export function leftFolderPath(folders: { path: string }[], leftPath: string): string | null {
+  const i = indexInFolder(
+    folders.map((f) => f.path),
+    leftPath,
+  );
+  return i >= 0 ? folders[i].path : null;
+}

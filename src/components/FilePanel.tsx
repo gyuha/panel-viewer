@@ -14,7 +14,8 @@ interface FilePanelProps {
   openedPath: string | null;
   history: HistoryEntry[];
   togglePanelKey: string;
-  onNavigate: (path: string) => void;
+  returnFolder: string | null;
+  onNavigate: (path: string, opts?: { up?: boolean }) => void;
   onOpenFile: (path: string) => void;
   onDeleteHistory: (path: string) => void;
   onResetHistory: () => void;
@@ -39,6 +40,7 @@ export function FilePanel({
   openedPath,
   history,
   togglePanelKey,
+  returnFolder,
   onNavigate,
   onOpenFile,
   onDeleteHistory,
@@ -49,6 +51,15 @@ export function FilePanel({
   const [view, setView] = useState<"folder" | "history">("folder");
   const [hpage, setHpage] = useState(0);
   const [confirmReset, setConfirmReset] = useState(false);
+
+  const returnRef = useRef<HTMLButtonElement>(null);
+
+  // 상위 폴더로 올라오면 방금 떠난 폴더 행을 세로 가운데로 스크롤한다.
+  useEffect(() => {
+    if (view === "folder" && returnFolder) {
+      returnRef.current?.scrollIntoView({ block: "center" });
+    }
+  }, [returnFolder, listing, view]);
 
   const pageCount = Math.max(1, Math.ceil(history.length / HISTORY_PAGE_SIZE));
   const page = Math.min(hpage, pageCount - 1);
@@ -112,13 +123,18 @@ export function FilePanel({
       ) : (
         <div className="panel-list">
           {listing?.parent && (
-          <button className="dir-row" onClick={() => onNavigate(listing.parent!)}>
+          <button className="dir-row" onClick={() => onNavigate(listing.parent!, { up: true })}>
             <span className="dir-icon">↩</span>
             <span className="dir-name">상위 폴더</span>
           </button>
         )}
         {listing?.folders.map((f) => (
-          <button key={f.path} className="dir-row" onClick={() => onNavigate(f.path)}>
+          <button
+            key={f.path}
+            ref={f.path === returnFolder ? returnRef : undefined}
+            className={`dir-row ${f.path === returnFolder ? "return" : ""}`}
+            onClick={() => onNavigate(f.path)}
+          >
             <span className="dir-icon">📁</span>
             <span className="dir-name">{f.name}</span>
           </button>

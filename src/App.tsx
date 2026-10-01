@@ -33,7 +33,7 @@ import {
 } from "./lib/api";
 import type { ViewMode } from "./lib/nav";
 import { DEFAULT_CUSTOM, eventKey, withKey, type Action, type CustomKeys } from "./lib/keymap";
-import { basename, indexInFolder } from "./lib/folder";
+import { basename, indexInFolder, leftFolderPath } from "./lib/folder";
 import { Viewer } from "./components/Viewer";
 import { FilePanel } from "./components/FilePanel";
 import { SettingsModal } from "./components/SettingsModal";
@@ -78,6 +78,9 @@ function App() {
   const [fileToken, setFileToken] = useState("");
   // 현재 폴더 단일 소스: 패널 목록이자 이전/다음 파일 이동의 범위
   const [listing, setListing] = useState<DirListing | null>(null);
+  const listingRef = useRef(listing);
+  listingRef.current = listing;
+  const [returnFolder, setReturnFolder] = useState<string | null>(null);
   const [folderError, setFolderError] = useState<string | null>(null);
   const readingPositions = useRef<Record<string, number>>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,10 +88,13 @@ function App() {
   const opening = useRef(false); // 재진입 가드: 여는 중엔 겹친 열기 요청 무시
 
   // 현재 폴더 이동(패널 폴더 클릭 등). 목록을 읽어 현재 폴더로 설정하고 마지막 폴더로 저장.
-  const navigate = useCallback(async (path: string | null) => {
+  // opts.up: "상위 폴더"로 올라오는 이동 — 방금 떠난 폴더를 복귀 폴더 표시로 남긴다.
+  const navigate = useCallback(async (path: string | null, opts?: { up?: boolean }) => {
     try {
+      const left = listingRef.current?.current;
       const l = await readDir(path);
       setListing(l);
+      setReturnFolder(opts?.up && left ? leftFolderPath(l.folders, left) : null);
       setFolderError(null);
       void saveLastFolder(l.current);
     } catch (e) {
@@ -107,6 +113,7 @@ function App() {
         try {
           const l = await readDir(dirname(path));
           setListing(l);
+          setReturnFolder(null);
           setFolderError(null);
           void saveLastFolder(l.current);
           const archives = l.files.filter((f) => f.kind === "archive").map((f) => f.path);
@@ -367,6 +374,7 @@ function App() {
           openedPath={openedPath}
           history={history}
           togglePanelKey={customKeys.togglePanel}
+          returnFolder={returnFolder}
           onNavigate={navigate}
           onOpenFile={openPath}
           onDeleteHistory={handleDeleteHistory}
