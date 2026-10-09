@@ -9,7 +9,8 @@
 #   scripts/release.sh patch|minor|major
 #   scripts/release.sh 1.2.3        # 명시 버전
 #
-# 요구: gh(로그인) · jq · perl · macOS GUI 세션(.dmg 번들은 Finder가 필요).
+# 요구: gh(로그인) · jq · perl · node · macOS GUI 세션(.dmg 번들은 Finder가 필요).
+# 릴리스 공개 후 Homebrew tap Cask도 갱신한다(scripts/update-tap.mjs, 실패 시 종료 코드 4).
 
 set -euo pipefail
 
@@ -19,6 +20,7 @@ cd "$(dirname "$0")/.."  # 저장소 루트로 이동
 command -v gh  >/dev/null || { echo "❌ gh CLI가 필요합니다."; exit 1; }
 command -v jq  >/dev/null || { echo "❌ jq가 필요합니다."; exit 1; }
 command -v perl >/dev/null || { echo "❌ perl이 필요합니다."; exit 1; }
+command -v node >/dev/null || { echo "❌ node가 필요합니다."; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "❌ gh 로그인 필요: gh auth login"; exit 1; }
 
 # 커밋되지 않은 변경이 있으면 중단(버전 커밋을 깔끔히 남기기 위해)
@@ -92,4 +94,12 @@ echo "✔ 빌드 산출물: $DMG"
 # ---- 5. GitHub 릴리스 생성 + 업로드 ----
 gh release create "$TAG" "$DMG" --title "$TAG" --generate-notes
 echo "✅ 릴리스 완료: $TAG"
+
+# ---- 6. Homebrew tap(gyuha/homebrew-tap) Cask 갱신 ----
+# 릴리스는 이미 공개됐으므로 tap 갱신이 실패해도 되돌리지 않는다. 안내를 보여 주고 종료 코드 4로 끝낸다.
+if ! node scripts/update-tap.mjs "$NEW"; then
+  echo "릴리스는 공개됐지만 Homebrew tap 갱신에 실패했습니다. 확인 후 다시: node scripts/update-tap.mjs $NEW" >&2
+  exit 4
+fi
+
 gh release view "$TAG" --web >/dev/null 2>&1 || true
